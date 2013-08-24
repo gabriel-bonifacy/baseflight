@@ -197,6 +197,7 @@ typedef struct baro_t
 #include "drv_mpu6050.h"
 #include "drv_l3g4200d.h"
 #include "drv_pwm.h"
+#include "drv_timer.h"
 #include "drv_uart.h"
 #else
 
@@ -214,6 +215,7 @@ typedef struct baro_t
 #include "drv_mpu6050.h"
 #include "drv_l3g4200d.h"
 #include "drv_pwm.h"
+#include "drv_timer.h"
 #include "drv_uart.h"
 #include "drv_hcsr04.h"
 
