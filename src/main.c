@@ -124,6 +124,8 @@ int main(void)
 
     serialInit(mcfg.serial_baudrate);
 
+    setupSerial();
+
     previousTime = micros();
     if (mcfg.mixerConfiguration == MULTITYPE_GIMBAL)
         calibratingA = 400;
@@ -134,6 +136,12 @@ int main(void)
     // loopy
     while (1) {
         loop();
+        while (serialAvailable(&(softSerialPorts[0]))) {
+
+            uint8_t b = serialReadByte(&(softSerialPorts[0]));
+            uartWrite(core.mainport, b);
+        };
+
     }
 }
 

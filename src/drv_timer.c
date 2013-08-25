@@ -71,9 +71,9 @@ static uint8_t channels[CC_CHANNELS_PER_TIMER] = {
 };
 
 typedef struct timerConfig_s {
-    timerCCCallbackPtr *callback;
-    uint8_t channel;
     TIM_TypeDef *tim;
+    uint8_t channel;
+    timerCCCallbackPtr *callback;
     uint8_t reference;
 } timerConfig_t;
 
@@ -130,8 +130,6 @@ void configureTimerCaptureCompareInterrupt(const timerHardware_t *timerHardwareP
     configureTimerInputCaptureCompareChannel(timerHardwarePtr->tim, timerHardwarePtr->channel);
 }
 
-
-
 void timerNVICConfig(uint8_t irq)
 {
     NVIC_InitTypeDef NVIC_InitStructure;
@@ -143,7 +141,28 @@ void timerNVICConfig(uint8_t irq)
     NVIC_Init(&NVIC_InitStructure);
 }
 
-timerConfig_t *findTimerConfig(TIM_TypeDef *tim, uint8_t channel) {
+void configTimeBase(TIM_TypeDef *tim, uint32_t period, uint8_t mhz)
+{
+    TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+
+    TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
+    TIM_TimeBaseStructure.TIM_Period = period - 1;
+    TIM_TimeBaseStructure.TIM_Prescaler = (SystemCoreClock / ((uint32_t)mhz * 1000000)) - 1;
+    TIM_TimeBaseStructure.TIM_ClockDivision = 0;
+    TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+    TIM_TimeBaseInit(tim, &TIM_TimeBaseStructure);
+}
+
+void timerInConfig(const timerHardware_t *timerHardwarePtr, uint32_t period, uint8_t mhz)
+{
+    configTimeBase(timerHardwarePtr->tim, period, mhz);
+    TIM_Cmd(timerHardwarePtr->tim, ENABLE);
+    timerNVICConfig(timerHardwarePtr->irq);
+}
+
+
+timerConfig_t *findTimerConfig(TIM_TypeDef *tim, uint8_t channel)
+{
     uint8_t timerConfigIndex = (lookupTimerIndex(tim) * MAX_TIMERS) + lookupChannelIndex(channel);
     return &(timerConfig[timerConfigIndex]);
 }
