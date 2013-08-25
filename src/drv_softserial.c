@@ -48,11 +48,11 @@ uint8_t readSerialSignal(softSerial_t *softSerial) {
 }
 
 void mergeSignalWithCurrentByte(softSerial_t *softSerial, uint8_t serialSignal) {
-    softSerial->port.rxBuffer[softSerial->port.rxBufferTail] |= (serialSignal << softSerial->state);
+    softSerial->rxBuffer[softSerial->port.rxBufferTail] |= (serialSignal << softSerial->state);
 }
 
 inline void initialiseCurrentByteWithFirstSignal(softSerial_t *softSerial, uint8_t serialSignal) {
-    softSerial->port.rxBuffer[softSerial->port.rxBufferTail] = serialSignal;
+    softSerial->rxBuffer[softSerial->port.rxBufferTail] = serialSignal;
 }
 
 inline void prepareForNextSignal(softSerial_t *softSerial) {
@@ -99,6 +99,7 @@ void onSerialTimer(uint8_t portIndex, uint16_t capture) {
     case BIT_6:
     case BIT_7:
         mergeSignalWithCurrentByte(softSerial, serialSignal);
+
         prepareForNextSignal(softSerial);
         break;
 
@@ -148,13 +149,13 @@ void setupSerial(void) {
 
     int baud = 19200;
 
-    configureTimerChannelCallback(softSerial->timerHardware->tim, TIM_IT_CC2, portIndex, onSerialTimer);
-    serialInputPortConfig(softSerial->timerHardware, baud, portIndex, onSerialPinChange);
+    configureTimerChannelCallback(softSerial->timerHardware->tim, TIM_Channel_2, portIndex, onSerialTimer);
 
     // TIM_CounterMode_Up
     TIM_ITConfig(TIM3, TIM_IT_CC2, ENABLE);
-
     stopSerialTimer(softSerial);
+
+    serialInputPortConfig(softSerial->timerHardware, baud, portIndex, onSerialPinChange);
 }
 
 bool serialAvailable(softSerial_t *softSerial) {

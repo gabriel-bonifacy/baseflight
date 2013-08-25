@@ -122,7 +122,9 @@ int main(void)
     if (feature(FEATURE_VBAT))
         batteryInit();
 
-    serialInit(mcfg.serial_baudrate);
+    //serialInit(mcfg.serial_baudrate);
+    serialInit(19200);
+    uartPrint(core.mainport, "ready!");
 
     setupSerial();
 
