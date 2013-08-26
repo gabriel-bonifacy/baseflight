@@ -47,7 +47,7 @@ static volatile uint8_t* read_p;
 
 static void i2c_er_handler(void)
 {
-    volatile uint32_t SR1Register, SR2Register;
+    volatile uint32_t SR1Register, __attribute__((unused))SR2Register;
     /* Read the I2C1 status register */
     SR1Register = I2Cx->SR1;
     if (SR1Register & 0x0F00) { //an error
@@ -168,7 +168,7 @@ void i2c_ev_handler(void)
         }
     } else if (SReg_1 & 0x0002) {       //we just sent the address - EV6 in ref manual
         //Read SR1,2 to clear ADDR
-        volatile uint8_t a;
+        volatile uint8_t __attribute__((unused))a;
         __DMB(); // memory fence to control hardware
         if (bytes == 1 && reading && subaddress_sent) { //we are receiving 1 byte - EV6_3
             I2C_AcknowledgeConfig(I2Cx, DISABLE);       //turn off ACK
@@ -220,7 +220,7 @@ void i2c_ev_handler(void)
             }
         }
         //we must wait for the start to clear, otherwise we get constant BTF
-        while (I2Cx->CR1 & 0x0100) { ; }                       
+        while (I2Cx->CR1 & 0x0100) { ; }
     } else if (SReg_1 & 0x0040) {       //Byte received - EV7
         read_p[index++] = I2C_ReceiveData(I2Cx);
         if (bytes == (index + 3))
