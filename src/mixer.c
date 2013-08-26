@@ -6,7 +6,6 @@ int16_t motor[MAX_MOTORS];
 int16_t servo[8] = { 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500 };
 
 static motorMixer_t currentMixer[MAX_MOTORS];
-static servoParam_t currentServo[MAX_SERVOS];
 
 static const motorMixer_t mixerTri[] = {
     { 1.0f,  0.0f,  1.333333f,  0.0f },     // REAR
@@ -254,7 +253,6 @@ static void airplaneMixer(void)
 {
 #if 0
     uint16_t servomid[8];
-    int16_t flaperons[2] = { 0, 0 };
 
     for (i = 0; i < 8; i++) {
         servomid[i] = 1500 + cfg.servotrim[i]; // servo center is 1500?
@@ -264,11 +262,6 @@ static void airplaneMixer(void)
         motor[0] = cfg.mincommand; // Kill throttle when disarmed
     else
         motor[0] = rcData[THROTTLE];
-
-    if (cfg.flaperons) {
-        
-        
-    }
 
     if (cfg.flaps) {
         int16_t flap = 1500 - constrain(rcData[cfg.flaps], cfg.servoendpoint_low[2], cfg.servoendpoint_high[2]);
