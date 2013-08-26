@@ -110,7 +110,9 @@ bool bmp085Detect(baro_t *baro)
     gpio.pin = Pin_14;
     gpio.mode = Mode_IN_FLOATING;
     gpioInit(GPIOC, &gpio);
+#ifdef BARO
     BARO_ON;
+#endif
 
     // EXTI interrupt for barometer EOC
     GPIO_EXTILineConfig(GPIO_PortSourceGPIOC, GPIO_PinSource14);
@@ -148,7 +150,9 @@ bool bmp085Detect(baro_t *baro)
         baro->calculate = bmp085_calculate;
         return true;
     }
+#ifdef BARO
     BARO_OFF;
+#endif
     return false;
 }
 
