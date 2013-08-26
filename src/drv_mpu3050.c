@@ -93,8 +93,8 @@ static void mpu3050Init(void)
 static void mpu3050Align(int16_t *gyroData)
 {
     // official direction is RPY
-    gyroData[0] = gyroData[0];
-    gyroData[1] = gyroData[1];
+    //gyroData[0] = gyroData[0];
+    //gyroData[1] = gyroData[1];
     gyroData[2] = -gyroData[2];
 }
 
