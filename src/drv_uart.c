@@ -244,7 +244,7 @@ void uartWrite(serialPort_t *s, uint8_t ch)
 void uartPrint(serialPort_t *s, const char *str)
 {
     uint8_t ch;
-    while (ch = *(str++)) {
+    while ((ch = *(str++))) {
         uartWrite(s, ch);
     }
 }

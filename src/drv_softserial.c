@@ -8,50 +8,52 @@ enum serialBitStatus {
 softSerial_t softSerialPorts[MAX_SOFTSERIAL_PORTS];
 
 
-softSerial_t* lookupSoftSerial(uint8_t timerIndex) {
-    uint8_t softSerialIndex = 0;
-    softSerial_t *softSerial;
-    do {
-      softSerial = &(softSerialPorts[softSerialIndex++]);
+softSerial_t* lookupSoftSerial(uint8_t reference)
+{
+    assert_param(reference >= 0 && reference <=MAX_SOFTSERIAL_PORTS);
 
-    } while (softSerial->timerIndex != timerIndex);
-    return softSerial;
+    return &(softSerialPorts[reference]);
 }
 
 
-void stopSerialTimer(softSerial_t *softSerial) {
+void stopSerialTimer(softSerial_t *softSerial)
+{
     TIM_Cmd(softSerial->timerHardware->tim, DISABLE);
     TIM_SetCounter(softSerial->timerHardware->tim, 0);
 }
 
-void startSerialTimer(softSerial_t *softSerial) {
+void startSerialTimer(softSerial_t *softSerial)
+{
     TIM_SetCounter(softSerial->timerHardware->tim, 0);
     TIM_Cmd(softSerial->timerHardware->tim, ENABLE);
 }
 
-static void waitForFirstBit(softSerial_t *softSerial) {
+static void waitForFirstBit(softSerial_t *softSerial)
+{
     softSerial->state = BIT_0;
     startSerialTimer(softSerial);
 }
 
-static void onSerialPinChange(uint8_t timerIndex, uint16_t capture) {
-
-    //softSerial_t *softSerial = lookupSoftSerial(timerIndex);
-    softSerial_t *softSerial = &(softSerialPorts[0]);
+static void onSerialPinChange(uint8_t reference, uint16_t capture)
+{
+    softSerial_t *softSerial = lookupSoftSerial(reference);
     if (softSerial->state == WAITING_FOR_START_BIT) {
         waitForFirstBit(softSerial);
     }
 }
 
-uint8_t readSerialSignal(softSerial_t *softSerial) {
+uint8_t readSerialSignal(softSerial_t *softSerial)
+{
     return GPIO_ReadInputDataBit(softSerial->timerHardware->gpio, softSerial->timerHardware->pin);
 }
 
-void mergeSignalWithCurrentByte(softSerial_t *softSerial, uint8_t serialSignal) {
+void mergeSignalWithCurrentByte(softSerial_t *softSerial, uint8_t serialSignal)
+{
     softSerial->rxBuffer[softSerial->port.rxBufferTail] |= (serialSignal << softSerial->state);
 }
 
-inline void initialiseCurrentByteWithFirstSignal(softSerial_t *softSerial, uint8_t serialSignal) {
+inline void initialiseCurrentByteWithFirstSignal(softSerial_t *softSerial, uint8_t serialSignal)
+{
     softSerial->rxBuffer[softSerial->port.rxBufferTail] = serialSignal;
 }
 
@@ -59,29 +61,26 @@ inline void prepareForNextSignal(softSerial_t *softSerial) {
     softSerial->state++;
 }
 
-void updateBufferIndex(softSerial_t *softSerial) {
-    if (softSerial->port.rxBufferTail >= softSerial->port.rxBufferSize - 1) {
+void updateBufferIndex(softSerial_t *softSerial)
+{
+    if (softSerial->port.rxBufferTail >= softSerial->port.rxBufferSize - 1)
+    {
         softSerial->port.rxBufferTail = 0; //cycling the buffer
     } else {
         softSerial->port.rxBufferTail++;
     }
 }
 
-void prepareForNextByte(softSerial_t *softSerial) {
+void prepareForNextByte(softSerial_t *softSerial)
+{
     stopSerialTimer(softSerial);
     softSerial->state = WAITING_FOR_START_BIT;
     updateBufferIndex(softSerial);
 }
 
-void onSerialTimer(uint8_t portIndex, uint16_t capture) {
-
-    //softSerial_t *softSerial = lookupSoftSerial(timerIndex);
-    if (portIndex != 0) {
-        return;
-    }
-
-    //softSerial_t *softSerial = &(softSerialPorts[portIndex]);
-    softSerial_t *softSerial = &(softSerialPorts[0]);
+void onSerialTimer(uint8_t portIndex, uint16_t capture)
+{
+    softSerial_t *softSerial = &(softSerialPorts[portIndex]);
 
     uint8_t serialSignal = readSerialSignal(softSerial);
 
@@ -122,68 +121,84 @@ static void softSerialGPIOConfig(GPIO_TypeDef *gpio, uint32_t pin, GPIO_Mode mod
     gpioInit(gpio, &cfg);
 }
 
-void serialInputPortConfig(const timerHardware_t *timerHardwarePtr, uint16_t baud, uint8_t reference, timerCCCallbackPtr callback) {
+void serialInputPortConfig(const timerHardware_t *timerHardwarePtr, uint16_t baud, uint8_t reference, timerCCCallbackPtr callback)
+{
     softSerialGPIOConfig(timerHardwarePtr->gpio, timerHardwarePtr->pin, Mode_IPU);
 
     pwmICConfig(timerHardwarePtr->tim, timerHardwarePtr->channel, TIM_ICPolarity_Falling);
 
-    int period;               //duration of one bit
-    period = 1000000 / baud;
+    int oneBitPeriod = (SOFT_SERIAL_TIMER_MHZ * 1000000) / baud;
 
-    timerInConfig(timerHardwarePtr, period, SOFT_SERIAL_TIMER_MHZ);
+    timerInConfig(timerHardwarePtr, oneBitPeriod, SOFT_SERIAL_TIMER_MHZ);
     configureTimerCaptureCompareInterrupt(timerHardwarePtr, reference, callback);
 }
 
-void setupSerial(void) {
-
+void setupSoftSerial1(uint32_t baud)
+{
     int portIndex = 0;
     softSerial_t *softSerial = &(softSerialPorts[portIndex]);
-    softSerial->port.rxBufferSize = SOFT_SERIAL_BUFFER_SIZE;
-    softSerial->port.rxBuffer = softSerial->rxBuffer;
+
     softSerial->timerHardware = &(timerHardware[SOFT_SERIAL_1_TIMER_HARDWARE]);
     softSerial->timerIndex = SOFT_SERIAL_1_TIMER_HARDWARE;
     softSerial->state = WAITING_FOR_START_BIT;
 
+    softSerial->port.rxBufferSize = SOFT_SERIAL_BUFFER_SIZE;
+    softSerial->port.rxBuffer = softSerial->rxBuffer;
     softSerial->port.rxBufferTail = 0;
     softSerial->port.rxBufferHead = 0;
 
-    int baud = 19200;
+    softSerial->port.txBuffer = 0;
+    softSerial->port.txBufferSize = 0;
+    softSerial->port.txBufferTail = 0;
+    softSerial->port.txBufferHead = 0;
+
+    softSerial->port.baudRate = baud;
+    softSerial->port.mode = MODE_RX;
+
+    // FIXME this uart specific initialisation doesn't belong really here
+    softSerial->port.txDMAChannel = 0;
+    softSerial->port.txDMAChannel = 0;
 
     configureTimerChannelCallback(softSerial->timerHardware->tim, TIM_Channel_2, portIndex, onSerialTimer);
 
-    // TIM_CounterMode_Up
     TIM_ITConfig(TIM3, TIM_IT_CC2, ENABLE);
     stopSerialTimer(softSerial);
 
     serialInputPortConfig(softSerial->timerHardware, baud, portIndex, onSerialPinChange);
 }
 
-bool serialAvailable(softSerial_t *softSerial) {
-    int availableBytes = 0;
-    if (softSerial->port.rxBufferTail != softSerial->port.rxBufferHead) {
-        if (softSerial->port.rxBufferTail > softSerial->port.rxBufferHead) {
-            availableBytes = softSerial->port.rxBufferTail - softSerial->port.rxBufferHead;
-        } else {
-            availableBytes = softSerial->port.rxBufferTail + softSerial->port.rxBufferSize - softSerial->port.rxBufferHead;
-        }
+bool serialAvailable(softSerial_t *softSerial)
+{
+    if (softSerial->port.rxBufferTail == softSerial->port.rxBufferHead) {
+        return 0;
+    }
+
+    int availableBytes;
+    if (softSerial->port.rxBufferTail > softSerial->port.rxBufferHead) {
+        availableBytes = softSerial->port.rxBufferTail - softSerial->port.rxBufferHead;
     } else {
-        availableBytes = 0;
+        availableBytes = softSerial->port.rxBufferTail + softSerial->port.rxBufferSize - softSerial->port.rxBufferHead;
     }
     return availableBytes;
 }
 
-uint8_t serialReadByte(softSerial_t *softSerial) {
-    char b;
-    if (serialAvailable(softSerial) > 0) {
-        //first read then increment reading index pointer, writing procedure does the same.
-        b = softSerial->port.rxBuffer[softSerial->port.rxBufferHead];
-        if (softSerial->port.rxBufferHead < softSerial->port.rxBufferSize - 1) {
-            softSerial->port.rxBufferHead++;
-        } else {
-            softSerial->port.rxBufferHead = 0;
-        }
+static void moveHeadToNextByte(softSerial_t *softSerial)
+{
+    if (softSerial->port.rxBufferHead < softSerial->port.rxBufferSize - 1) {
+        softSerial->port.rxBufferHead++;
     } else {
-        b = '#'; //no chars available but read anyway
+        softSerial->port.rxBufferHead = 0;
     }
+}
+
+uint8_t serialReadByte(softSerial_t *softSerial)
+{
+    if (serialAvailable(softSerial) == 0) {
+        return 0;
+    }
+
+    char b = softSerial->port.rxBuffer[softSerial->port.rxBufferHead];
+
+    moveHeadToNextByte(softSerial);
     return b;
 }

@@ -16,7 +16,7 @@ typedef struct softSerial_s {
     volatile int state;
     volatile uint8_t rxBuffer[SOFT_SERIAL_BUFFER_SIZE];
 } softSerial_t;
-void setupSerial(void);
+void setupSoftSerial1(uint32_t baud);
 
 uint8_t serialReadByte(softSerial_t *softSerial);
 bool serialAvailable(softSerial_t *softSerial);

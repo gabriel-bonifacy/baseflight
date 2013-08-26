@@ -200,6 +200,8 @@ static void timCCxHandler(TIM_TypeDef *tim)
 
         timerConfig = findTimerConfig(tim, TIM_Channel_4);
         capture = TIM_GetCapture4(tim);
+    } else {
+        return; // avoid uninitialised variable dereference
     }
 
     if (!timerConfig->callback) {

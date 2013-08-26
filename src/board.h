@@ -219,6 +219,7 @@ typedef struct baro_t
 #include "drv_pwm.h"
 #include "drv_timer.h"
 #include "drv_uart.h"
+#include "drv_softserial.h"
 #include "drv_hcsr04.h"
 
 #endif

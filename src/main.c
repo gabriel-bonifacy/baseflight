@@ -122,11 +122,14 @@ int main(void)
     if (feature(FEATURE_VBAT))
         batteryInit();
 
-    //serialInit(mcfg.serial_baudrate);
-    serialInit(19200);
-    uartPrint(core.mainport, "ready!");
+#ifdef SOFTSERIAL_19200_LOOPBACK
 
-    setupSerial();
+    serialInit(19200);
+    setupSoftSerial1(19200);
+    uartPrint(core.mainport, "LOOPBACK 19200 ENABLED");
+#else
+    serialInit(mcfg.serial_baudrate);
+#endif
 
     previousTime = micros();
     if (mcfg.mixerConfiguration == MULTITYPE_GIMBAL)
@@ -138,12 +141,13 @@ int main(void)
     // loopy
     while (1) {
         loop();
-        while (serialAvailable(&(softSerialPorts[0]))) {
+#ifdef SOFTSERIAL_19200_LOOPBACK
+        while (serialAvailable(&softSerialPorts[0])) {
 
-            uint8_t b = serialReadByte(&(softSerialPorts[0]));
+            uint8_t b = serialReadByte(&softSerialPorts[0]);
             uartWrite(core.mainport, b);
         };
-
+#endif
     }
 }
 
