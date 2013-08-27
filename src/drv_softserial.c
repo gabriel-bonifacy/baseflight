@@ -10,7 +10,7 @@ softSerial_t softSerialPorts[MAX_SOFTSERIAL_PORTS];
 
 softSerial_t* lookupSoftSerial(uint8_t reference)
 {
-    assert_param(reference >= 0 && reference <=MAX_SOFTSERIAL_PORTS);
+    assert_param(reference >= 0 && reference <= MAX_SOFTSERIAL_PORTS);
 
     return &(softSerialPorts[reference]);
 }
