@@ -46,12 +46,12 @@ void hmc5883lInit(void)
 {
     GPIO_InitTypeDef GPIO_InitStructure;
 
-    //#ifdef OLIMEXINO
+    #ifdef OLIMEXINO
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13;
-    //#else
+    #else
     // PB12 - MAG_DRDY output on rev4 hardware
-    //GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12;
-    //#endif
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12;
+    #endif
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
     GPIO_Init(GPIOB, &GPIO_InitStructure);

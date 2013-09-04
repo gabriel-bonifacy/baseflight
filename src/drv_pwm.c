@@ -84,11 +84,19 @@ static pwmHardware_t timerHardware[] = {
     { TIM3, GPIOB, GPIO_Pin_0, TIM_Channel_3, TIM3_IRQn, 0, },          // PWM7
     { TIM3, GPIOB, GPIO_Pin_1, TIM_Channel_4, TIM3_IRQn, 0, },          // PWM8
     { TIM1, GPIOA, GPIO_Pin_8, TIM_Channel_1, TIM1_CC_IRQn, 1, },       // PWM9
-    { TIM1, GPIOA, GPIO_Pin_11, TIM_Channel_4, TIM1_CC_IRQn, 1, },      // PWM10
+    #ifdef OLIMEXINO
+    { TIM4, GPIOB, GPIO_Pin_8, TIM_Channel_3, TIM4_IRQn, 0, },          // PWM10 
+    #else
+    { TIM1, GPIOA, GPIO_Pin_11, TIM_Channel_4, TIM1_CC_IRQn, 1, }, 
+    #endif
     { TIM4, GPIOB, GPIO_Pin_6, TIM_Channel_1, TIM4_IRQn, 0, },          // PWM11
-    { TIM4, GPIOB, GPIO_Pin_7, TIM_Channel_2, TIM4_IRQn, 0, },          // PWM12
-    { TIM4, GPIOB, GPIO_Pin_9, TIM_Channel_4, TIM4_IRQn, 0, },          // PWM13
-    { TIM4, GPIOB, GPIO_Pin_8, TIM_Channel_3, TIM4_IRQn, 0, },          // PWM14
+    { TIM4, GPIOB, GPIO_Pin_7, TIM_Channel_2, TIM4_IRQn, 0, },          // PWM12    
+    #ifdef OLIMEXINO
+    { TIM1, GPIOA, GPIO_Pin_11, TIM_Channel_4, TIM1_CC_IRQn, 1, },      // PWM13 // replaced with PWM10
+    #else
+    { TIM4, GPIOB, GPIO_Pin_8, TIM_Channel_3, TIM4_IRQn, 0, },  
+    #endif
+    { TIM4, GPIOB, GPIO_Pin_9, TIM_Channel_4, TIM4_IRQn, 0, },          // PWM14
 };
 
 typedef struct {
