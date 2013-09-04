@@ -15,7 +15,7 @@
 #
 
 # The target to build, must be one of NAZE, FY90Q OR OLIMEXINO
-TARGET		?= NAZE
+TARGET		?= OLIMEXINO
 
 # Compile-time options
 OPTIONS		?=
@@ -82,6 +82,7 @@ OLIMEXINO_SRC	 = drv_adc.c \
 		   drv_mpu3050.c \
 		   drv_mpu6050.c \
 		   drv_l3g4200d.c \
+		   drv_hmc5883l.c \
 		   drv_pwm.c \
 		   $(COMMON_SRC)
 

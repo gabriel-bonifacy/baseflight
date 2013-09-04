@@ -121,8 +121,9 @@ typedef struct baro_t
 
 #define GYRO
 #define ACC
+#define MAG
 
-#define SENSORS_SET (SENSOR_ACC)
+#define SENSORS_SET (SENSOR_ACC | SENSOR_MAG)
 
 #endif
 
