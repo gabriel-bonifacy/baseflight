@@ -21,25 +21,7 @@ typedef enum NavigationMode
 // Syncronized with GUI. Only exception is mixer > 11, which is always returned as 11 during serialization.
 typedef enum MultiType
 {
-    MULTITYPE_TRI = 1,
-    MULTITYPE_QUADP = 2,
-    MULTITYPE_QUADX = 3,
-    MULTITYPE_BI = 4,
-    MULTITYPE_GIMBAL = 5,
-    MULTITYPE_Y6 = 6,
-    MULTITYPE_HEX6 = 7,
-    MULTITYPE_FLYING_WING = 8,
-    MULTITYPE_Y4 = 9,
-    MULTITYPE_HEX6X = 10,
-    MULTITYPE_OCTOX8 = 11,          // Java GUI is same for the next 3 configs
-    MULTITYPE_OCTOFLATP = 12,       // MultiWinGui shows this differently
-    MULTITYPE_OCTOFLATX = 13,       // MultiWinGui shows this differently
-    MULTITYPE_AIRPLANE = 14,        // airplane / singlecopter / dualcopter (not yet properly supported)
-    MULTITYPE_HELI_120_CCPM = 15,
-    MULTITYPE_HELI_90_DEG = 16,
-    MULTITYPE_VTAIL4 = 17,
-    MULTITYPE_CUSTOM = 18,          // no current GUI displays this
-    MULTITYPE_LAST = 19
+    MULTITYPE_QUADX = 0,
 } MultiType;
 
 typedef enum GimbalFlags {
@@ -198,38 +180,6 @@ typedef struct config_t {
     uint16_t tri_yaw_min;                   // tail servo min
     uint16_t tri_yaw_max;                   // tail servo max
 
-    // flying wing related configuration
-    uint16_t wing_left_min;                 // min/mid/max servo travel
-    uint16_t wing_left_mid;
-    uint16_t wing_left_max;
-    uint16_t wing_right_min;
-    uint16_t wing_right_mid;
-    uint16_t wing_right_max;
-    int8_t pitch_direction_l;               // left servo - pitch orientation
-    int8_t pitch_direction_r;               // right servo - pitch orientation (opposite sign to pitch_direction_l if servos are mounted mirrored)
-    int8_t roll_direction_l;                // left servo - roll orientation
-    int8_t roll_direction_r;                // right servo - roll orientation  (same sign as ROLL_DIRECTION_L, if servos are mounted in mirrored orientation)
-
-    // gimbal-related configuration
-    int8_t gimbal_pitch_gain;               // gimbal pitch servo gain (tied to angle) can be negative to invert movement
-    int8_t gimbal_roll_gain;                // gimbal roll servo gain (tied to angle) can be negative to invert movement
-    uint8_t gimbal_flags;                   // in servotilt mode, various things that affect stuff
-    uint16_t gimbal_pitch_min;              // gimbal pitch servo min travel
-    uint16_t gimbal_pitch_max;              // gimbal pitch servo max travel
-    uint16_t gimbal_pitch_mid;              // gimbal pitch servo neutral value
-    uint16_t gimbal_roll_min;               // gimbal roll servo min travel
-    uint16_t gimbal_roll_max;               // gimbal roll servo max travel
-    uint16_t gimbal_roll_mid;               // gimbal roll servo neutral value
-
-    // gps-related stuff
-    uint8_t gps_type;                       // Type of GPS hardware. 0: NMEA 1: UBX 2+ ??
-    uint32_t gps_baudrate;                  // GPS baudrate
-    uint16_t gps_wp_radius;                 // if we are within this distance to a waypoint then we consider it reached (distance is in cm)
-    uint8_t gps_lpf;                        // Low pass filter cut frequency for derivative calculation (default 20Hz)
-    uint8_t nav_slew_rate;                  // Adds a rate control to nav output, will smoothen out nav angle spikes
-    uint8_t nav_controls_heading;           // copter faces toward the navigation point, maghold must be enabled for it
-    uint16_t nav_speed_min;                 // cm/sec
-    uint16_t nav_speed_max;                 // cm/sec
 
     // serial(uart1) baudrate
     uint32_t serial_baudrate;

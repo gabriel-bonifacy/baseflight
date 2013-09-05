@@ -443,8 +443,6 @@ bool pwmInit(drv_pwm_config_t *init)
     const uint8_t *setup;
 
     // this is pretty hacky shit, but it will do for now. array of 4 config maps, [ multiPWM multiPPM airPWM airPPM ]
-    if (init->airplane)
-        i = 2; // switch to air hardware config
     if (init->usePPM)
         i++; // next index is for PPM
 
@@ -475,18 +473,6 @@ bool pwmInit(drv_pwm_config_t *init)
         if (mask & (TYPE_IP | TYPE_IW) && !init->enableInput)
             mask = 0;
 
-        if (init->useServos && !init->airplane) {
-            // remap PWM9+10 as servos (but not in airplane mode LOL)
-            if (port == PWM9 || port == PWM10)
-                mask = TYPE_S;
-        }
-
-        if (init->extraServos && !init->airplane) {
-            // remap PWM5..8 as servos when used in extended servo mode
-            if (port >= PWM5 && port <= PWM8)
-                mask = TYPE_S;
-        }
-
         if (mask & TYPE_IP) {
             pwmInConfig(port, ppmCallback, 0);
             numInputs = 8;
@@ -495,8 +481,6 @@ bool pwmInit(drv_pwm_config_t *init)
             numInputs++;
         } else if (mask & TYPE_M) {
             motors[numMotors++] = pwmOutConfig(port, 1000000 / init->motorPwmRate, PULSE_1MS);
-        } else if (mask & TYPE_S) {
-            servos[numServos++] = pwmOutConfig(port, 1000000 / init->servoPwmRate, PULSE_1MS);
         }
     }
 

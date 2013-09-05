@@ -6,7 +6,6 @@ extern rcReadRawDataPtr rcReadRawFunc;
 
 // two receiver read functions
 extern uint16_t pwmReadRawRC(uint8_t chan);
-extern uint16_t spektrumReadRawRC(uint8_t chan);
 
 static void _putc(void *p, char c)
 {
@@ -64,17 +63,10 @@ int main(void)
 
     mixerInit(); // this will set useServo var depending on mixer type
     // when using airplane/wing mixer, servo/motor outputs are remapped
-    if (cfg.mixerConfiguration == MULTITYPE_AIRPLANE || cfg.mixerConfiguration == MULTITYPE_FLYING_WING)
-        pwm_params.airplane = true;
-    else
-        pwm_params.airplane = false;
     pwm_params.useUART = feature(FEATURE_GPS) || feature(FEATURE_SPEKTRUM); // spektrum support uses UART too
     pwm_params.usePPM = feature(FEATURE_PPM);
     pwm_params.enableInput = !feature(FEATURE_SPEKTRUM); // disable inputs if using spektrum
-    pwm_params.useServos = useServo;
-    pwm_params.extraServos = cfg.gimbal_flags & GIMBAL_FORWARDAUX;
     pwm_params.motorPwmRate = cfg.motor_pwm_rate;
-    pwm_params.servoPwmRate = cfg.servo_pwm_rate;
     switch (cfg.power_adc_channel) {
         case 1:
             pwm_params.adcChannel = PWM2;
@@ -91,23 +83,6 @@ int main(void)
 
     // configure PWM/CPPM read function. spektrum below will override that
     rcReadRawFunc = pwmReadRawRC;
-
-    if (feature(FEATURE_SPEKTRUM)) {
-        spektrumInit();
-        rcReadRawFunc = spektrumReadRawRC;
-    } else {
-        // spektrum and GPS are mutually exclusive
-        // Optional GPS - available in both PPM and PWM input mode, in PWM input, reduces number of available channels by 2.
-        if (feature(FEATURE_GPS))
-            gpsInit(cfg.gps_baudrate);
-    }
-#ifdef SONAR
-    // sonar stuff only works with PPM
-    if (feature(FEATURE_PPM)) {
-        if (feature(FEATURE_SONAR))
-            Sonar_init();
-    }
-#endif
 
     LED1_ON;
     LED0_OFF;
@@ -131,8 +106,6 @@ int main(void)
         batteryInit();
 
     previousTime = micros();
-    if (cfg.mixerConfiguration == MULTITYPE_GIMBAL)
-        calibratingA = 400;
     calibratingG = 1000;
     f.SMALL_ANGLES_25 = 1;
 

@@ -20,60 +20,28 @@ sensor_t gyro;                      // gyro access functions
 baro_t baro;                        // barometer access functions
 uint8_t accHardware = ACC_DEFAULT;  // which accel chip is used/detected
 
-#ifdef FY90Q
-// FY90Q analog gyro/acc
-void sensorsAutodetect(void)
-{
-    adcSensorInit(&acc, &gyro);
-}
-#else
 // AfroFlight32 i2c sensors
 void sensorsAutodetect(void)
 {
     int16_t deg, min;
-    drv_adxl345_config_t acc_params;
     bool haveMpu6k = false;
-    bool havel3g4200d = false;
+  
 
     // Autodetect gyro hardware. We have MPU3050 or MPU6050.
     if (mpu6050Detect(&acc, &gyro, &cfg.mpu6050_scale)) {
         // this filled up  acc.* struct with init values
         haveMpu6k = true;
-    } else if (l3g4200dDetect(&gyro)) {
-        havel3g4200d = true;
-    } else if (!mpu3050Detect(&gyro)) {
+    } else{
         // if this fails, we get a beep + blink pattern. we're doomed, no gyro or i2c error.
         failureMode(3);
     }
 
     // Accelerometer. Fuck it. Let user break shit.
 retry:
-    switch (cfg.acc_hardware) {
-        case 0: // autodetect
-        case 1: // ADXL345
-            acc_params.useFifo = false;
-            acc_params.dataRate = 800; // unused currently
-            if (adxl345Detect(&acc_params, &acc))
-                accHardware = ACC_ADXL345;
-            if (cfg.acc_hardware == ACC_ADXL345)
-                break;
-            ; // fallthrough
-       case 2: // MPU6050
-            if (haveMpu6k) {
-                mpu6050Detect(&acc, &gyro, &cfg.mpu6050_scale); // yes, i'm rerunning it again.  re-fill acc struct
-                accHardware = ACC_MPU6050;
-                if (cfg.acc_hardware == ACC_MPU6050)
-                    break;
-            }
-            ; // fallthrough
-#ifndef OLIMEXINO
-        case 3: // MMA8452
-            if (mma8452Detect(&acc)) {
-                accHardware = ACC_MMA8452;
-                if (cfg.acc_hardware == ACC_MMA8452)
-                    break;
-            }
-#endif
+
+    if (haveMpu6k) {
+        mpu6050Detect(&acc, &gyro, &cfg.mpu6050_scale); // yes, i'm rerunning it again.  re-fill acc struct
+        accHardware = ACC_MPU6050;;
     }
 
     // Found anything? Check if user fucked up or ACC is really missing.
@@ -90,13 +58,10 @@ retry:
 
 #ifdef BARO
     // Detect what pressure sensors are available. baro->update() is set to sensor-specific update function
-    if (!ms5611Detect(&baro)) {
-        // ms5611 disables BMP085, and tries to initialize + check PROM crc. if this works, we have a baro
         if (!bmp085Detect(&baro)) {
             // if both failed, we don't have anything
             sensorsClear(SENSOR_BARO);
         }
-    }
 #endif
 
     // Now time to init things, acc first
@@ -104,14 +69,6 @@ retry:
         acc.init();
     // this is safe because either mpu6050 or mpu3050 or lg3d20 sets it, and in case of fail, we never get here.
     gyro.init();
-
-    // todo: this is driver specific :(
-    if (havel3g4200d) {
-        l3g4200dConfig(cfg.gyro_lpf);
-    } else {
-        if (!haveMpu6k)
-            mpu3050Config(cfg.gyro_lpf);
-    }
 
 #ifdef MAG
     if (!hmc5883lDetect())
@@ -123,7 +80,6 @@ retry:
     min = cfg.mag_declination % 100;
     magneticDeclination = (deg + ((float)min * (1.0f / 60.0f))) * 10; // heading is in 0.1deg units
 }
-#endif
 
 uint16_t batteryAdcToVoltage(uint16_t src)
 {
@@ -544,20 +500,4 @@ void Mag_getADC(void)
         }
     }
 }
-#endif
-
-#ifdef SONAR
-
-void Sonar_init(void)
-{
-    hcsr04_init(sonar_rc78);
-    sensorsSet(SENSOR_SONAR);
-    sonarAlt = 0;
-}
-
-void Sonar_update(void)
-{
-    hcsr04_get_distance(&sonarAlt);
-}
-
 #endif

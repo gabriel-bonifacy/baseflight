@@ -190,16 +190,6 @@ static void evaluateCommand(void)
         cfg.angleTrim[ROLL]  = read16();
         headSerialReply(0);
         break;
-    case MSP_SET_RAW_GPS:
-        f.GPS_FIX = read8();
-        GPS_numSat = read8();
-        GPS_coord[LAT] = read32();
-        GPS_coord[LON] = read32();
-        GPS_altitude = read16();
-        GPS_speed = read16();
-        GPS_update |= 2;        // New data signalisation to GPS functions
-        headSerialReply(0);
-        break;
     case MSP_SET_PID:
         for (i = 0; i < PIDITEMS; i++) {
             cfg.P8[i] = read8();
@@ -267,21 +257,6 @@ static void evaluateCommand(void)
         for (i = 0; i < 8; i++)
             serialize16(rcData[i]);
         break;
-    case MSP_RAW_GPS:
-        headSerialReply(14);
-        serialize8(f.GPS_FIX);
-        serialize8(GPS_numSat);
-        serialize32(GPS_coord[LAT]);
-        serialize32(GPS_coord[LON]);
-        serialize16(GPS_altitude);
-        serialize16(GPS_speed);
-        break;
-    case MSP_COMP_GPS:
-        headSerialReply(5);
-        serialize16(GPS_distanceToHome);
-        serialize16(GPS_directionToHome);
-        serialize8(GPS_update & 1);
-        break;
     case MSP_ATTITUDE:
         headSerialReply(8);
         for (i = 0; i < 2; i++)
@@ -337,23 +312,6 @@ static void evaluateCommand(void)
         headSerialReply(8);
         for (i = 0; i < 8; i++)
             serialize8(i + 1);
-        break;
-    case MSP_WP:
-        wp_no = read8();    // get the wp number
-        headSerialReply(12);
-        if (wp_no == 0) {
-            serialize8(0);                   // wp0
-            serialize32(GPS_home[LAT]);
-            serialize32(GPS_home[LON]);
-            serialize16(0);                  // altitude will come here
-            serialize8(0);                   // nav flag will come here
-        } else if (wp_no == 16) {
-            serialize8(16);                  // wp16
-            serialize32(GPS_hold[LAT]);
-            serialize32(GPS_hold[LON]);
-            serialize16(0);                  // altitude will come here
-            serialize8(0);                   // nav flag will come here
-        }
         break;
     case MSP_RESET_CONF:
         checkFirstTime(true);
@@ -464,9 +422,5 @@ void serialCom(void)
             }
             c_state = IDLE;
         }
-    }
-    if (!cliMode && !uartAvailable() && feature(FEATURE_TELEMETRY) && f.ARMED) { // The first 2 conditions should never evaluate to true but I'm putting it here anyway - silpstream
-        sendTelemetry();
-        return;
     }
 }

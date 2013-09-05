@@ -223,38 +223,6 @@ static void resetConf(void)
     cfg.tri_yaw_min = 1020;
     cfg.tri_yaw_max = 2000;
 
-    // flying wing
-    cfg.wing_left_min = 1020;
-    cfg.wing_left_mid = 1500;
-    cfg.wing_left_max = 2000;
-    cfg.wing_right_min = 1020;
-    cfg.wing_right_mid = 1500;
-    cfg.wing_right_max = 2000;
-    cfg.pitch_direction_l = 1;
-    cfg.pitch_direction_r = -1;
-    cfg.roll_direction_l = 1;
-    cfg.roll_direction_r = 1;
-
-    // gimbal
-    cfg.gimbal_pitch_gain = 10;
-    cfg.gimbal_roll_gain = 10;
-    cfg.gimbal_flags = GIMBAL_NORMAL;
-    cfg.gimbal_pitch_min = 1020;
-    cfg.gimbal_pitch_max = 2000;
-    cfg.gimbal_pitch_mid = 1500;
-    cfg.gimbal_roll_min = 1020;
-    cfg.gimbal_roll_max = 2000;
-    cfg.gimbal_roll_mid = 1500;
-
-    // gps/nav stuff
-    cfg.gps_type = GPS_NMEA;
-    cfg.gps_baudrate = 115200;
-    cfg.gps_wp_radius = 200;
-    cfg.gps_lpf = 20;
-    cfg.nav_slew_rate = 30;
-    cfg.nav_controls_heading = 1;
-    cfg.nav_speed_min = 100;
-    cfg.nav_speed_max = 300;
 
     // serial (USART1) baudrate
     cfg.serial_baudrate = 115200;

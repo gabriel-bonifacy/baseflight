@@ -28,25 +28,6 @@ uint8_t rcOptions[CHECKBOXITEMS];
 
 int16_t axisPID[3];
 
-// **********************
-// GPS
-// **********************
-int32_t GPS_coord[2];
-int32_t GPS_home[2];
-int32_t GPS_hold[2];
-uint8_t GPS_numSat;
-uint16_t GPS_distanceToHome;        // distance to home point in meters
-int16_t GPS_directionToHome;        // direction to home or hol point in degrees
-uint16_t GPS_altitude, GPS_speed;   // altitude in 0.1m and speed in 0.1m/s
-uint8_t GPS_update = 0;             // it's a binary toogle to distinct a GPS position update
-int16_t GPS_angle[2] = { 0, 0 };    // it's the angles that must be applied for GPS correction
-uint16_t GPS_ground_course = 0;     // degrees * 10
-uint8_t GPS_Present = 0;            // Checksum from Gps serial
-uint8_t GPS_Enable = 0;
-int16_t nav[2];
-int16_t nav_rated[2];               // Adding a rate controller to the navigation to make it smoother
-int8_t nav_mode = NAV_MODE_NONE;    // Navigation mode
-
 // Automatic ACC Offset Calibration
 uint16_t InflightcalibratingA = 0;
 int16_t AccInflightCalibrationArmed;
@@ -167,20 +148,7 @@ void annexCode(void)
             LED0_OFF;
         if (f.ARMED)
             LED0_ON;
-        // This will switch to/from 9600 or 115200 baud depending on state. Of course, it should only do it on changes.
-        if (feature(FEATURE_TELEMETRY))
-            initTelemetry(f.ARMED);
     }
-
-#ifdef LEDRING
-    if (feature(FEATURE_LED_RING)) {
-        static uint32_t LEDTime;
-        if ((int32_t)(currentTime - LEDTime) >= 0) {
-            LEDTime = currentTime + 50000;
-            ledringState();
-        }
-    }
-#endif
 
     if ((int32_t)(currentTime - calibratedAccTime) >= 0) {
         if (!f.SMALL_ANGLES_25) {
@@ -193,15 +161,6 @@ void annexCode(void)
     }
 
     serialCom();
-
-    if (sensors(SENSOR_GPS)) {
-        static uint32_t GPSLEDTime;
-        if ((int32_t)(currentTime - GPSLEDTime) >= 0 && (GPS_numSat >= 5)) {
-            GPSLEDTime = currentTime + 150000;
-            LED1_TOGGLE;
-        }
-    }
-
     // Read out gyro temperature. can use it for something somewhere. maybe get MCU temperature instead? lots of fun possibilities.
     if (gyro.temperature)
         gyro.temperature(&telemTemperature1);
@@ -259,15 +218,9 @@ void loop(void)
     uint16_t auxState = 0;
     int16_t prop;
 
-    // this will return false if spektrum is disabled. shrug.
-    if (spektrumFrameComplete())
-        computeRC();
-
     if ((int32_t)(currentTime - rcTime) >= 0) { // 50Hz
         rcTime = currentTime + 20000;
         // TODO clean this up. computeRC should handle this check
-        if (!feature(FEATURE_SPEKTRUM))
-            computeRC();
 
         // Failsafe routine
         if (feature(FEATURE_FAILSAFE)) {
@@ -298,8 +251,6 @@ void loop(void)
             if (rcData[YAW] < cfg.mincheck && rcData[PITCH] < cfg.mincheck && !f.ARMED) {
                 if (rcDelayCommand == 20) {
                     calibratingG = 1000;
-                    if (feature(FEATURE_GPS))
-                        GPS_reset_home_position();
                 }
             } else if (feature(FEATURE_INFLIGHT_ACC_CAL) && (!f.ARMED && rcData[YAW] < cfg.mincheck && rcData[PITCH] > cfg.maxcheck && rcData[ROLL] > cfg.maxcheck)) {
                 if (rcDelayCommand == 20) {
@@ -345,31 +296,15 @@ void loop(void)
             } else if (rcData[PITCH] > cfg.maxcheck) {
                 cfg.angleTrim[PITCH] += 2;
                 writeParams(1);
-#ifdef LEDRING
-                if (feature(FEATURE_LED_RING))
-                    ledringBlink();
-#endif
             } else if (rcData[PITCH] < cfg.mincheck) {
                 cfg.angleTrim[PITCH] -= 2;
                 writeParams(1);
-#ifdef LEDRING
-                if (feature(FEATURE_LED_RING))
-                    ledringBlink();
-#endif
             } else if (rcData[ROLL] > cfg.maxcheck) {
                 cfg.angleTrim[ROLL] += 2;
                 writeParams(1);
-#ifdef LEDRING
-                if (feature(FEATURE_LED_RING))
-                    ledringBlink();
-#endif
             } else if (rcData[ROLL] < cfg.mincheck) {
                 cfg.angleTrim[ROLL] -= 2;
                 writeParams(1);
-#ifdef LEDRING
-                if (feature(FEATURE_LED_RING))
-                    ledringBlink();
-#endif
             } else {
                 rcDelayCommand = 0;
             }
@@ -461,39 +396,10 @@ void loop(void)
         }
 #endif
 
-        if (sensors(SENSOR_GPS)) {
-            if (f.GPS_FIX && GPS_numSat >= 5) {
-                if (rcOptions[BOXGPSHOME]) {
-                    if (!f.GPS_HOME_MODE) {
-                        f.GPS_HOME_MODE = 1;
-                        GPS_set_next_wp(&GPS_home[LAT], &GPS_home[LON]);
-                        nav_mode = NAV_MODE_WP;
-                    }
-                } else {
-                    f.GPS_HOME_MODE = 0;
-                }
-                if (rcOptions[BOXGPSHOLD]) {
-                    if (!f.GPS_HOLD_MODE) {
-                        f.GPS_HOLD_MODE = 1;
-                        GPS_hold[LAT] = GPS_coord[LAT];
-                        GPS_hold[LON] = GPS_coord[LON];
-                        GPS_set_next_wp(&GPS_hold[LAT], &GPS_hold[LON]);
-                        nav_mode = NAV_MODE_POSHOLD;
-                    }
-                } else {
-                    f.GPS_HOLD_MODE = 0;
-                }
-            }
-        }
-
         if (rcOptions[BOXPASSTHRU]) {
             f.PASSTHRU_MODE = 1;
         } else {
             f.PASSTHRU_MODE = 0;
-        }
-
-        if (cfg.mixerConfiguration == MULTITYPE_FLYING_WING || cfg.mixerConfiguration == MULTITYPE_AIRPLANE) {
-            f.HEADFREE_MODE = 0;
         }
     } else {                    // not in rc loop
         static int8_t taskOrder = 0;    // never call all function in the same loop, to avoid high delay spikes
@@ -517,12 +423,6 @@ void loop(void)
 #endif
             break;
         case 3:
-#ifdef SONAR
-            if (sensors(SENSOR_SONAR)) {
-                Sonar_update();
-                debug[2] = sonarAlt;
-            }
-#endif
             break;
         default:
             taskOrder = 0;
@@ -569,32 +469,13 @@ void loop(void)
         }
 #endif
 
-        if (sensors(SENSOR_GPS)) {
-            // Check that we really need to navigate ?
-            if ((!f.GPS_HOME_MODE && !f.GPS_HOLD_MODE) || !f.GPS_FIX_HOME) {
-                // If not. Reset nav loops and all nav related parameters
-                GPS_reset_nav();
-            } else {
-                float sin_yaw_y = sinf(heading * 0.0174532925f);
-                float cos_yaw_x = cosf(heading * 0.0174532925f);
-                if (cfg.nav_slew_rate) {
-                    nav_rated[LON] += constrain(wrap_18000(nav[LON] - nav_rated[LON]), -cfg.nav_slew_rate, cfg.nav_slew_rate); // TODO check this on uint8
-                    nav_rated[LAT] += constrain(wrap_18000(nav[LAT] - nav_rated[LAT]), -cfg.nav_slew_rate, cfg.nav_slew_rate);
-                    GPS_angle[ROLL] = (nav_rated[LON] * cos_yaw_x - nav_rated[LAT] * sin_yaw_y) / 10;
-                    GPS_angle[PITCH] = (nav_rated[LON] * sin_yaw_y + nav_rated[LAT] * cos_yaw_x) / 10;
-                } else {
-                    GPS_angle[ROLL] = (nav[LON] * cos_yaw_x - nav[LAT] * sin_yaw_y) / 10;
-                    GPS_angle[PITCH] = (nav[LON] * sin_yaw_y + nav[LAT] * cos_yaw_x) / 10;
-                }
-            }
-        }
 
         // **** PITCH & ROLL & YAW PID ****    
         prop = max(abs(rcCommand[PITCH]), abs(rcCommand[ROLL])); // range [0;500]
         for (axis = 0; axis < 3; axis++) {
             if ((f.ANGLE_MODE || f.HORIZON_MODE) && axis < 2) { // MODE relying on ACC
                 // 50 degrees max inclination
-                errorAngle = constrain(2 * rcCommand[axis] + GPS_angle[axis], -500, +500) - angle[axis] + cfg.angleTrim[axis];
+                errorAngle = constrain(2 * rcCommand[axis], -500, +500) - angle[axis] + cfg.angleTrim[axis];
 #ifdef LEVEL_PDF
                 PTermACC = -(int32_t)angle[axis] * cfg.P8[PIDLEVEL] / 100;
 #else
@@ -642,7 +523,6 @@ void loop(void)
         }
 
         mixTable();
-        writeServos();
         writeMotors();
     }
 }

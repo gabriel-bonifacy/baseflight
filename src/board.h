@@ -94,22 +94,6 @@ typedef struct baro_t
 #define digitalLo(p, i)     { p->BRR = i; }
 #define digitalToggle(p, i) { p->ODR ^= i; }
 
-// Hardware definitions and GPIO
-
-#ifdef FY90Q
- // FY90Q
-#define LED0_GPIO   GPIOC
-#define LED0_PIN    GPIO_Pin_12
-#define LED1_GPIO   GPIOA
-#define LED1_PIN    GPIO_Pin_15
-
-#define GYRO
-#define ACC
-
-#define SENSORS_SET (SENSOR_ACC)
-
-#endif
-
 #ifdef OLIMEXINO
 // OLIMEXINO
 
@@ -124,29 +108,6 @@ typedef struct baro_t
 #define MAG
 
 #define SENSORS_SET (SENSOR_ACC | SENSOR_MAG)
-
-#endif
-
-#ifdef NAZE
- // Afroflight32
-#define LED0_GPIO   GPIOB
-#define LED0_PIN    GPIO_Pin_3 // PB3 (LED)
-#define LED1_GPIO   GPIOB
-#define LED1_PIN    GPIO_Pin_4 // PB4 (LED)
-#define BEEP_GPIO   GPIOA
-#define BEEP_PIN    GPIO_Pin_12 // PA12 (Buzzer)
-#define BARO_GPIO   GPIOC
-#define BARO_PIN    GPIO_Pin_13
-
-#define GYRO
-#define ACC
-#define MAG
-#define BARO
-#define LEDRING
-#define SONAR
-#define BUZZER
-
-#define SENSORS_SET (SENSOR_ACC | SENSOR_BARO | SENSOR_MAG)
 
 #endif
 
@@ -171,44 +132,15 @@ typedef struct baro_t
 
 #undef SOFT_I2C                 // enable to test software i2c
 
-#ifdef FY90Q
- // FY90Q
-#include "drv_system.h"         // timers, delays, etc
-#include "drv_adc.h"
-#include "drv_i2c.h"
-#include "drv_pwm.h"
-#include "drv_uart.h"
-#endif
 
 #ifdef OLIMEXINO
 // OLIMEXINO
 #include "drv_system.h"         // timers, delays, etc
 #include "drv_adc.h"
 #include "drv_i2c.h"
-#include "drv_adxl345.h"
-#include "drv_mpu3050.h"
 #include "drv_mpu6050.h"
-#include "drv_l3g4200d.h"
 #include "drv_pwm.h"
 #include "drv_uart.h"
-#endif
-
-#ifdef NAZE
- // AfroFlight32
-#include "drv_system.h"         // timers, delays, etc
-#include "drv_adc.h"
-#include "drv_adxl345.h"
-#include "drv_bmp085.h"
-#include "drv_ms5611.h"
 #include "drv_hmc5883l.h"
-#include "drv_i2c.h"
-#include "drv_ledring.h"
-#include "drv_mma845x.h"
-#include "drv_mpu3050.h"
-#include "drv_mpu6050.h"
-#include "drv_l3g4200d.h"
-#include "drv_pwm.h"
-#include "drv_uart.h"
-#include "drv_hcsr04.h"
-
 #endif
+
