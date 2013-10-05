@@ -107,7 +107,7 @@ void beep_code(char first, char second, char third, char pause)
             icnt++;
         beepDone = 0;
         buzzerIsOn = 0;
-        BEEP_OFF;
+        BEEP_OFF; //Makro zdefiniowane w board.h
     }
 }
 
@@ -115,11 +115,11 @@ static void beep(uint16_t pulse)
 {
     if (!buzzerIsOn && (millis() >= (buzzerLastToggleTime + 50))) {         // Buzzer is off and long pause time is up -> turn it on
         buzzerIsOn = 1;
-        BEEP_ON;
+        BEEP_ON; //Makro zdefiniowane w board.h
         buzzerLastToggleTime = millis();      // save the time the buzer turned on
     } else if (buzzerIsOn && (millis() >= buzzerLastToggleTime + pulse)) {         // Buzzer is on and time is up -> turn it off
         buzzerIsOn = 0;
-        BEEP_OFF;
+        BEEP_OFF; //Makro zdefiniowane w board.h
         buzzerLastToggleTime = millis();
         if (toggleBeep >0)
             toggleBeep--;

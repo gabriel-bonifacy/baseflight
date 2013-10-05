@@ -107,21 +107,6 @@ typedef struct baro_t
 } baro_t;
 
 // Hardware definitions and GPIO
-#ifdef FY90Q
- // FY90Q
-#define LED0_GPIO   GPIOC
-#define LED0_PIN    Pin_12
-#define LED1_GPIO   GPIOA
-#define LED1_PIN    Pin_15
-
-#define GYRO
-#define ACC
-#define LED0
-#define LED1
-
-#define SENSORS_SET (SENSOR_ACC)
-
-#else
 
 #ifdef OLIMEXINO
 // OLIMEXINO
@@ -141,35 +126,9 @@ typedef struct baro_t
 
 #define GYRO
 #define ACC
-
-#define SENSORS_SET (SENSOR_ACC)
-
-#else
-// Afroflight32
-
-#define LED0_GPIO   GPIOB
-#define LED0_PIN    Pin_3 // PB3 (LED)
-#define LED1_GPIO   GPIOB
-#define LED1_PIN    Pin_4 // PB4 (LED)
-#define BEEP_GPIO   GPIOA
-#define BEEP_PIN    Pin_12 // PA12 (Buzzer)
-#define BARO_GPIO   GPIOC
-#define BARO_PIN    Pin_13
-
-#define GYRO
-#define ACC
 #define MAG
-#define BARO
-#define LEDRING
-#define SONAR
-#define BUZZER
-#define LED0
-#define LED1
 
-#define SENSORS_SET (SENSOR_ACC | SENSOR_BARO | SENSOR_MAG)
-
-#endif
-
+#define SENSORS_SET (SENSOR_ACC | SENSOR_MAG)
 
 // Helpful macros
 #ifdef LED0
@@ -214,18 +173,5 @@ typedef struct baro_t
 #include "drv_timer.h"
 #include "drv_uart.h"
 #include "drv_softserial.h"
-#else
-
- // AfroFlight32
-#include "drv_adc.h"
-#include "drv_bmp085.h"
-#include "drv_i2c.h"
-#include "drv_spi.h"
-#include "drv_mpu6050.h"
-#include "drv_pwm.h"
-#include "drv_timer.h"
-#include "drv_uart.h"
-#include "drv_softserial.h"
-
 #endif
 #endif

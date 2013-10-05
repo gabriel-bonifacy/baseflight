@@ -248,7 +248,7 @@ void Baro_Common(void)
     baroHistIdx = indexplus1;
 }
 
-
+//Funkcja aktualizująca odczyty z barometru
 int Baro_update(void)
 {
     static uint32_t baroDeadline = 0;
@@ -317,6 +317,7 @@ static float devStandardDeviation(stdev_t *dev)
     return sqrtf(devVariance(dev));
 }
 
+//Funkcja wykonywana po każdym odczycie z żyroskopu
 static void GYRO_Common(void)
 {
     int axis;
@@ -324,6 +325,7 @@ static void GYRO_Common(void)
     static int32_t g[3];
     static stdev_t var[3];
 
+	//Kalibracja żyroskopu po starcie
     if (calibratingG > 0) {
         for (axis = 0; axis < 3; axis++) {
             // Reset g[axis] at start of calibration
@@ -354,6 +356,7 @@ static void GYRO_Common(void)
         }
         calibratingG--;
     }
+    //Odczyty dla wystkich 3 osi
     for (axis = 0; axis < 3; axis++) {
         gyroADC[axis] -= gyroZero[axis];
         //anti gyro glitch, limit the variation between two consecutive readings
@@ -362,10 +365,13 @@ static void GYRO_Common(void)
     }
 }
 
+//Odczytanie watoście z żyroskopu
 void Gyro_getADC(void)
 {
     // range: +/- 8192; +/- 2000 deg/sec
-    gyro.read(gyroADC);
+    gyro.read(gyroADC); 
+    
+    //Możliwość ręcznej kalibracji przez użytkownika (patrz config.h)
     // if we have CUSTOM alignment configured, user is "assumed" to know what they're doing
     if (mcfg.align[ALIGN_GYRO][0])
         alignSensors(ALIGN_GYRO, gyroADC);

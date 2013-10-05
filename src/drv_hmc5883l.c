@@ -143,3 +143,4 @@ void hmc5883lRead(int16_t *magData)
             magData[-axis - 1] = -mag[i];
     }
 }
+
