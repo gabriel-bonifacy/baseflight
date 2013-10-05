@@ -715,8 +715,4 @@ void serialCom(void)
             c_state = IDLE;
         }
     }
-    if (!cliMode && !isUartAvailable(core.telemport) && feature(FEATURE_TELEMETRY) && f.ARMED) { // The first 2 conditions should never evaluate to true but I'm putting it here anyway - silpstream
-        sendTelemetry();
-        return;
-    }
 }

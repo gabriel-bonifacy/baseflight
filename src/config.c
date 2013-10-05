@@ -319,21 +319,30 @@ static void resetConf(void)
         memcpy(&mcfg.profile[i], &cfg, sizeof(config_t));
 }
 
+//Zwraca informacje, czy w systemie występuje określony sensor.
+//Mask -- użyj typu wyliczeniowego AvailableSensors (patrz plik board.h)
 bool sensors(uint32_t mask)
 {
     return enabledSensors & mask;
 }
 
+//Ustaw informację o istnieniu określonego sensoru w systemie.
+//Mask -- użyj typu wyliczeniowego AvailableSensors (patrz plik board.h)
 void sensorsSet(uint32_t mask)
 {
     enabledSensors |= mask;
 }
 
+//Wyczyść informację o istnieniu określonego sensoru w systemie.
+//Mask -- użyj typu wyliczeniowego AvailableSensors (patrz plik board.h)
 void sensorsClear(uint32_t mask)
 {
     enabledSensors &= ~(mask);
 }
 
+//Zwraca maske informującą o tym, jakie sensory występują w systemie
+//Maska powinna być ustawiona przez funkcję sensorsAutodetect z pliku sensors.*,
+//nigdy nie powinna zaś być ustawiana ręcznie!
 uint32_t sensorsMask(void)
 {
     return enabledSensors;

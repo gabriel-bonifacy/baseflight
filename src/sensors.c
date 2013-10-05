@@ -21,103 +21,57 @@ sensor_t gyro;                      // gyro access functions
 baro_t baro;                        // barometer access functions
 uint8_t accHardware = ACC_DEFAULT;  // which accel chip is used/detected
 
-#ifdef FY90Q
-// FY90Q analog gyro/acc
-void sensorsAutodetect(void)
-{
-    adcSensorInit(&acc, &gyro);
-}
-#else
+
 // AfroFlight32 i2c sensors
 void sensorsAutodetect(void)
 {
     int16_t deg, min;
-    drv_adxl345_config_t acc_params;
-    bool haveMpu6k = false;
+    
+    //----------- Wykrywanie akcelerometru -----------
+    bool haveMpu6k = false; //Nie wykryoto MPU6050 (jesteśmy przed autodetekcją). 
 
-    // Autodetect gyro hardware. We have MPU3050 or MPU6050.
+    //Autodetekcja MPU6050.
+    //Jeżeli MPU6050 nie zostanie wykryte, ustaw failure mode 3.
     if (mpu6050Detect(&acc, &gyro, mcfg.gyro_lpf, &mcfg.mpu6050_scale)) {
-        // this filled up  acc.* struct with init values
+		//Ustawienie zmiennej haveMpu6k na true powoduje inicjalizację
+		//struktury acc.* domyślnymi wartościami dla MPU6050.
         haveMpu6k = true;
-    } else if (l3g4200dDetect(&gyro, mcfg.gyro_lpf)) {
-        // well, we found our gyro
-        ;
-    } else if (!mpu3050Detect(&gyro, mcfg.gyro_lpf)) {
-        // if this fails, we get a beep + blink pattern. we're doomed, no gyro or i2c error.
-        failureMode(3);
+        accHardware = ACC_MPU6050; //Zmienna informuje o typie akcelerometru.
+    } else {
+		sensorsClear(SENSOR_ACC); //Oznacz brak akcelerometru w systemie
+								 //(z racji wywołania failureMode jest to wywołanie czysto formalne).
+        failureMode(3); //Wywołanie funkcji nformującej o błędzie systemu (patrz drv_system.*).
     }
 
-    // Accelerometer. Fuck it. Let user break shit.
-retry:
-    switch (mcfg.acc_hardware) {
-        case 0: // autodetect
-        case 1: // ADXL345
-            acc_params.useFifo = false;
-            acc_params.dataRate = 800; // unused currently
-            if (adxl345Detect(&acc_params, &acc))
-                accHardware = ACC_ADXL345;
-            if (mcfg.acc_hardware == ACC_ADXL345)
-                break;
-            ; // fallthrough
-        case 2: // MPU6050
-            if (haveMpu6k) {
-                mpu6050Detect(&acc, &gyro, mcfg.gyro_lpf, &mcfg.mpu6050_scale); // yes, i'm rerunning it again.  re-fill acc struct
-                accHardware = ACC_MPU6050;
-                if (mcfg.acc_hardware == ACC_MPU6050)
-                    break;
-            }
-            ; // fallthrough
-#ifndef OLIMEXINO
-        case 3: // MMA8452
-            if (mma8452Detect(&acc)) {
-                accHardware = ACC_MMA8452;
-                if (mcfg.acc_hardware == ACC_MMA8452)
-                    break;
-            }
-#endif
-    }
-
-    // Found anything? Check if user fucked up or ACC is really missing.
-    if (accHardware == ACC_DEFAULT) {
-        if (mcfg.acc_hardware > ACC_DEFAULT) {
-            // Nothing was found and we have a forced sensor type. Stupid user probably chose a sensor that isn't present.
-            mcfg.acc_hardware = ACC_DEFAULT;
-            goto retry;
-        } else {
-            // We're really screwed
-            sensorsClear(SENSOR_ACC);
-        }
-    }
-
+	//----------- Wykrywanie barometru -----------
 #ifdef BARO
-    // Detect what pressure sensors are available. baro->update() is set to sensor-specific update function
-    if (!ms5611Detect(&baro)) {
-        // ms5611 disables BMP085, and tries to initialize + check PROM crc. if this works, we have a baro
-        if (!bmp085Detect(&baro)) {
-            // if both failed, we don't have anything
-            sensorsClear(SENSOR_BARO);
-        }
-    }
+	if (!bmp085Detect(&baro)) {
+		sensorsClear(SENSOR_BARO); //Oznacz brak barometru w systemie
+	}
 #endif
 
-    // Now time to init things, acc first
+    //Inicjalizuj akcelerometr, jeżeli został wykryty w systemie.
     if (sensors(SENSOR_ACC))
         acc.init();
-    // this is safe because either mpu6050 or mpu3050 or lg3d20 sets it, and in case of fail, we never get here.
+    //To wywołanie jest bezpieczne, ponieważ jeżeli program doszedł
+    //do tej funkcji, oznacza to, że układ MPU6050 został wykryty,
+    //zaś ten układ posiada poza akcelerometrem także wbudowany żyroskop.
     gyro.init();
 
+	//----------- Wykrywanie magnetometru -----------
 #ifdef MAG
     if (!hmc5883lDetect(mcfg.align[ALIGN_MAG]))
-        sensorsClear(SENSOR_MAG);
+        sensorsClear(SENSOR_MAG); //Oznacz brak magnetometru w systemie
 #endif
 
-    // calculate magnetic declination
+	//Obliczenia na podstawie wartości zapisanych w pliku config.c.
+    //calculate magnetic declination
     deg = cfg.mag_declination / 100;
     min = cfg.mag_declination % 100;
     magneticDeclination = (deg + ((float)min * (1.0f / 60.0f))) * 10; // heading is in 0.1deg units
 }
-#endif
 
+//Oblicz napięcia na baterii na podstawie odczytu z ADC
 uint16_t batteryAdcToVoltage(uint16_t src)
 {
     // calculate battery voltage based on ADC reading
@@ -125,19 +79,23 @@ uint16_t batteryAdcToVoltage(uint16_t src)
     return (((src) * 3.3f) / 4095) * mcfg.vbatscale;
 }
 
+//Inicjalizuj informację o baterii (liczb celli oraz mimimalne napięci na jedną cellę)
 void batteryInit(void)
 {
-    uint32_t i;
-    uint32_t voltage = 0;
+    uint32_t i; //Liczba celli bateri (wykrywana na podstawie mcfg.vbatmaxcellvoltage, patrz config.c)
+    uint32_t voltage = 0; //Napięcie odczytane z ADC
 
+	//Wykonaj 32 odczyty napięcia
     // average up some voltage readings
     for (i = 0; i < 32; i++) {
         voltage += adcGetChannel(ADC_BATTERY);
         delay(10);
     }
-
+	
+	//Średnie napięcie na podstawie 32 odczytów.
     voltage = batteryAdcToVoltage((uint16_t)(voltage / 32));
 
+	//Autodetekcja liczby celli na podstawie mcfg.vbatmaxcellvoltage (patrz config.c)
     // autodetect cell count, going from 2S..6S
     for (i = 2; i < 6; i++) {
         if (voltage < i * mcfg.vbatmaxcellvoltage)
@@ -147,6 +105,7 @@ void batteryInit(void)
     batteryWarningVoltage = i * mcfg.vbatmincellvoltage; // 3.3V per cell minimum, configurable in CLI
 }
 
+//Kalibracja sensorów (potrzebna pogłębiona analiza)
 // ALIGN_GYRO = 0,
 // ALIGN_ACCEL = 1,
 // ALIGN_MAG = 2
@@ -169,11 +128,13 @@ static void alignSensors(uint8_t type, int16_t *data)
     }
 }
 
+//Funkcja wywoływana po każdym odczycie akclerometru
 static void ACC_Common(void)
 {
     static int32_t a[3];
     int axis;
 
+	//Kalibracja akcelerometru przy starcie
     if (calibratingA > 0) {
         for (axis = 0; axis < 3; axis++) {
             // Reset a[axis] at start of calibration
@@ -197,6 +158,7 @@ static void ACC_Common(void)
         calibratingA--;
     }
 
+	//Kalibracja akceleromteru w locie
     if (feature(FEATURE_INFLIGHT_ACC_CAL)) {
         static int32_t b[3];
         static int16_t accZero_saved[3] = { 0, 0, 0 };
@@ -251,9 +213,12 @@ static void ACC_Common(void)
     accADC[YAW] -= mcfg.accZero[YAW];
 }
 
+//Odczytaj akcelerometr
 void ACC_getADC(void)
 {
+	//Wywołanie funkcji odczytującej dla odpowiedniego typu akcelerometru (patrz sensor_t w board.h)
     acc.read(accADC);
+    //Możliwość ręcznej kalibracji przez użytkownika (patrz config.h)
     // if we have CUSTOM alignment configured, user is "assumed" to know what they're doing
     if (mcfg.align[ALIGN_ACCEL][0])
         alignSensors(ALIGN_ACCEL, accADC);
@@ -264,18 +229,22 @@ void ACC_getADC(void)
 }
 
 #ifdef BARO
+//Funkcja wywoływana po każdym odczycie temperatury (przed oczytem ciśnienia) z barometru
 void Baro_Common(void)
 {
+	//Tablica historii odczytów z barometru (BARO_TAB_SIZE_MAX ustawiane w mw.h na 48)
     static int32_t baroHistTab[BARO_TAB_SIZE_MAX];
-    static int baroHistIdx;
-    int indexplus1;
+    static int baroHistIdx; //Aktualny indeks w historii
+    int indexplus1; //Następny indeks w historii (baroHistIdx + 1)
 
     indexplus1 = (baroHistIdx + 1);
+    //Jeżeli tablica histori jest zapełniona, zacznij od początku (cfg.baro_tab_size patrz config.c)
+	//cfg.baro_tab_size <= 48!
     if (indexplus1 == cfg.baro_tab_size)
         indexplus1 = 0;
-    baroHistTab[baroHistIdx] = baroPressure;
-    baroPressureSum += baroHistTab[baroHistIdx];
-    baroPressureSum -= baroHistTab[indexplus1];
+    baroHistTab[baroHistIdx] = baroPressure; //Zapisz odczyt od tablicy historii
+    baroPressureSum += baroHistTab[baroHistIdx]; //Sumuj aktualny odczyt
+    baroPressureSum -= baroHistTab[indexplus1]; //Odejmij najstarszy odczyt
     baroHistIdx = indexplus1;
 }
 
@@ -290,19 +259,24 @@ int Baro_update(void)
 
     baroDeadline = currentTime;
     
+    //State = 1 -- barometr gotowy do odczytu ciśnienia
+    //State = 0 -- barometr gotowy do odczytu temperatury
     if (state) {
-        baro.get_up();
-        baro.start_ut();
-        baroDeadline += baro.ut_delay;
+        baro.get_up(); //Odczytaj ciśnienie
+        baro.start_ut(); //Przygotuj do odczytania temperatury
+        baroDeadline += baro.ut_delay; //Czas jaki musi upłynąć do przełączenia
+									   //w stan odczytu temperatury.
+        //baroPressure i baroTemperature jest zadeklarowane w mw.h
         baro.calculate(&baroPressure, &baroTemperature);
-        state = 0;
+        state = 0; //Barometr gotowy od odczytu temperatury
         return 2;
     } else {
-        baro.get_ut();
-        baro.start_up();
+        baro.get_ut(); //Odczytaj temperaturę
+        baro.start_up(); //Przgotuj do odczytania ciśnienia
         Baro_Common();
-        state = 1;
-        baroDeadline += baro.up_delay;
+        state = 1; //Barometr w stanie do odczytu ciśnienia
+        baroDeadline += baro.up_delay; //Czas jaki musi upłynąć do przełączenia
+									   //w stan odczytu ciśnienia.
         return 1;
     }
 }
@@ -473,20 +447,4 @@ int Mag_getADC(void)
     
     return 1;
 }
-#endif
-
-#ifdef SONAR
-
-void Sonar_init(void) 
-{
-    hcsr04_init(sonar_rc78);
-    sensorsSet(SENSOR_SONAR);
-    sonarAlt = 0;
-}
-
-void Sonar_update(void) 
-{
-    hcsr04_get_distance(&sonarAlt);
-}
-
 #endif

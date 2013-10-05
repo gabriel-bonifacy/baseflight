@@ -88,22 +88,22 @@ typedef void (* pidControllerFuncPtr)(void);                // pid controller fu
 
 typedef struct sensor_t
 {
-    sensorInitFuncPtr init;                                 // initialize function
-    sensorReadFuncPtr read;                                 // read 3 axis data function
-    sensorReadFuncPtr align;                                // sensor align
-    sensorReadFuncPtr temperature;                          // read temperature if available
-    float scale;                                            // scalefactor (currently used for gyro only, todo for accel)
+    sensorInitFuncPtr init;                                 // initialize function (wskaźnik na funkcję inicjalizującą)
+    sensorReadFuncPtr read;                                 // read 3 axis data function (wskaźnik na funkcję odczytującą)
+    sensorReadFuncPtr align;                                // sensor align (wskaźnik na funkcję kalibrującą)
+    sensorReadFuncPtr temperature;                          // read temperature if available (wskaźnik na funkcję do odczytania temperatury)
+    float scale;                                            // scalefactor (currently used for gyro only, todo for accel) (skala, używane tylko dla żyro)
 } sensor_t;
 
 typedef struct baro_t
 {
     uint16_t ut_delay;
     uint16_t up_delay;
-    sensorInitFuncPtr start_ut;
-    sensorInitFuncPtr get_ut;
-    sensorInitFuncPtr start_up;
-    sensorInitFuncPtr get_up;
-    baroCalculateFuncPtr calculate;
+    sensorInitFuncPtr start_ut;								//Wskaźnik na funkcję przygotowującą do odczyty temperatury.
+    sensorInitFuncPtr get_ut;								//Wskaźnik na funkcję przygotowującą do odczyty temperatury.
+    sensorInitFuncPtr start_up;								//Wskaźnik na funkcję przygotowującą do odczyty ciśnienia.
+    sensorInitFuncPtr get_up;								//Wskaźnik na funkcję odczytująca ciśnienie.
+    baroCalculateFuncPtr calculate;							//Wskaźnik na funkcję obliczającą ciśnienie
 } baro_t;
 
 // Hardware definitions and GPIO
@@ -169,7 +169,7 @@ typedef struct baro_t
 #define SENSORS_SET (SENSOR_ACC | SENSOR_BARO | SENSOR_MAG)
 
 #endif
-#endif
+
 
 // Helpful macros
 #ifdef LED0
@@ -204,23 +204,12 @@ typedef struct baro_t
 
 #undef SOFT_I2C                 // enable to test software i2c
 
-#ifdef FY90Q
- // FY90Q
-#include "drv_adc.h"
-#include "drv_i2c.h"
-#include "drv_pwm.h"
-#include "drv_uart.h"
-#else
-
 #ifdef OLIMEXINO
 // OLIMEXINO
 #include "drv_adc.h"
 #include "drv_i2c.h"
 #include "drv_spi.h"
-#include "drv_adxl345.h"
-#include "drv_mpu3050.h"
 #include "drv_mpu6050.h"
-#include "drv_l3g4200d.h"
 #include "drv_pwm.h"
 #include "drv_timer.h"
 #include "drv_uart.h"
@@ -229,22 +218,14 @@ typedef struct baro_t
 
  // AfroFlight32
 #include "drv_adc.h"
-#include "drv_adxl345.h"
 #include "drv_bmp085.h"
-#include "drv_ms5611.h"
-#include "drv_hmc5883l.h"
 #include "drv_i2c.h"
 #include "drv_spi.h"
-#include "drv_ledring.h"
-#include "drv_mma845x.h"
-#include "drv_mpu3050.h"
 #include "drv_mpu6050.h"
-#include "drv_l3g4200d.h"
 #include "drv_pwm.h"
 #include "drv_timer.h"
 #include "drv_uart.h"
 #include "drv_softserial.h"
-#include "drv_hcsr04.h"
 
 #endif
 #endif

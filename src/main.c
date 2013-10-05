@@ -7,7 +7,6 @@ extern rcReadRawDataPtr rcReadRawFunc;
 
 // two receiver read functions
 extern uint16_t pwmReadRawRC(uint8_t chan);
-extern uint16_t spektrumReadRawRC(uint8_t chan);
 
 #ifdef USE_LAME_PRINTF
 // gcc/GNU version
@@ -84,15 +83,11 @@ int main(void)
     // configure PWM/CPPM read function. spektrum below will override that
     rcReadRawFunc = pwmReadRawRC;
 
-    if (feature(FEATURE_SPEKTRUM)) {
-        spektrumInit();
-        rcReadRawFunc = spektrumReadRawRC;
-    } else {
-        // spektrum and GPS are mutually exclusive
-        // Optional GPS - available in both PPM and PWM input mode, in PWM input, reduces number of available channels by 2.
-        if (feature(FEATURE_GPS))
-            gpsInit(mcfg.gps_baudrate);
-    }
+	// spektrum and GPS are mutually exclusive
+	// Optional GPS - available in both PPM and PWM input mode, in PWM input, reduces number of available channels by 2.
+	if (feature(FEATURE_GPS))
+		gpsInit(mcfg.gps_baudrate);
+    
 #ifdef SONAR
     // sonar stuff only works with PPM
     if (feature(FEATURE_PPM)) {

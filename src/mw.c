@@ -178,20 +178,7 @@ void annexCode(void)
             LED0_OFF;
         if (f.ARMED)
             LED0_ON;
-        // This will switch to/from 9600 or 115200 baud depending on state. Of course, it should only do it on changes.
-        if (feature(FEATURE_TELEMETRY))
-            initTelemetry(f.ARMED);
     }
-
-#ifdef LEDRING
-    if (feature(FEATURE_LED_RING)) {
-        static uint32_t LEDTime;
-        if ((int32_t)(currentTime - LEDTime) >= 0) {
-            LEDTime = currentTime + 50000;
-            ledringState();
-        }
-    }
-#endif
 
     if ((int32_t)(currentTime - calibratedAccTime) >= 0) {
         if (!f.SMALL_ANGLES_25) {
@@ -437,15 +424,10 @@ void loop(void)
     static uint8_t GPSNavReset = 1;
     bool isThrottleLow = false;
 
-    // this will return false if spektrum is disabled. shrug.
-    if (spektrumFrameComplete())
-        computeRC();
-
     if ((int32_t)(currentTime - rcTime) >= 0) { // 50Hz
         rcTime = currentTime + 20000;
-        // TODO clean this up. computeRC should handle this check
-        if (!feature(FEATURE_SPEKTRUM))
-            computeRC();
+
+        computeRC();
 
         // in 3D mode, we need to be able to disarm by switch at any time
         if (feature(FEATURE_3D)) {
@@ -761,11 +743,7 @@ void loop(void)
 #endif
         case 3:
             taskOrder++;
-#ifdef SONAR
-            if (sensors(SENSOR_SONAR)) {
-                Sonar_update();
-            }
-#endif
+            
             if (feature(FEATURE_VARIO) && f.VARIO_MODE)
                 mwVario();
             break;
@@ -781,9 +759,6 @@ void loop(void)
         currentTime = micros();
         cycleTime = (int32_t)(currentTime - previousTime);
         previousTime = currentTime;
-#ifdef MPU6050_DMP
-        mpu6050DmpLoop();
-#endif
 
 #ifdef MAG
         if (sensors(SENSOR_MAG)) {

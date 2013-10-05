@@ -155,6 +155,9 @@ void delay(uint32_t ms)
         delayMicroseconds(1000);
 }
 
+//Informuje o błędzie systemu (np. braku akcelerometru).
+//Pętla nieskończona, wymusza restart systemu!
+//Mode -- określa czas pomiędzy zmianą stanu diody a wł./wy. buzzera.
 void failureMode(uint8_t mode)
 {
     LED1_ON;
