@@ -124,6 +124,8 @@ typedef struct baro_t
 #define LED1
 #endif
 
+#define USE_I2C
+#define USE_SPI
 #define GYRO
 #define ACC
 #define MAG
@@ -169,6 +171,7 @@ typedef struct baro_t
 #include "drv_i2c.h"
 #include "drv_spi.h"
 #include "drv_mpu6050.h"
+#include "drv_hmc5883l.h"
 #include "drv_pwm.h"
 #include "drv_timer.h"
 #include "drv_uart.h"

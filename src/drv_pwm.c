@@ -56,28 +56,12 @@ enum {
 static pwmPortData_t pwmPorts[MAX_PORTS];
 static uint16_t captures[MAX_INPUTS];
 static pwmPortData_t *motors[MAX_MOTORS];
-static pwmPortData_t *servos[MAX_SERVOS];
 static uint8_t numMotors = 0;
-static uint8_t numServos = 0;
 static uint8_t  numInputs = 0;
 static uint16_t failsafeThreshold = 985;
 // external vars (ugh)
 extern int16_t failsafeCnt;
 
-static const uint8_t multiPPM[] = {
-    PWM1 | TYPE_IP,     // PPM input
-    PWM9 | TYPE_M,      // Swap to servo if needed
-    PWM10 | TYPE_M,     // Swap to servo if needed
-    PWM11 | TYPE_M,
-    PWM12 | TYPE_M,
-    PWM13 | TYPE_M,
-    PWM14 | TYPE_M,
-    PWM5 | TYPE_M,      // Swap to servo if needed
-    PWM6 | TYPE_M,      // Swap to servo if needed
-    PWM7 | TYPE_M,      // Swap to servo if needed
-    PWM8 | TYPE_M,      // Swap to servo if needed
-    0xFF
-};
 
 static const uint8_t multiPWM[] = {
     PWM1 | TYPE_IW,     // input #1
@@ -95,46 +79,6 @@ static const uint8_t multiPWM[] = {
     PWM13 | TYPE_M,
     PWM14 | TYPE_M,     // motor #4 or #6
     0xFF
-};
-
-static const uint8_t airPPM[] = {
-    PWM1 | TYPE_IP,     // PPM input
-    PWM9 | TYPE_M,      // motor #1
-    PWM10 | TYPE_M,     // motor #2
-    PWM11 | TYPE_S,     // servo #1
-    PWM12 | TYPE_S,
-    PWM13 | TYPE_S,
-    PWM14 | TYPE_S,     // servo #4
-    PWM5 | TYPE_S,      // servo #5
-    PWM6 | TYPE_S,
-    PWM7 | TYPE_S,
-    PWM8 | TYPE_S,      // servo #8
-    0xFF
-};
-
-static const uint8_t airPWM[] = {
-    PWM1 | TYPE_IW,     // input #1
-    PWM2 | TYPE_IW,
-    PWM3 | TYPE_IW,
-    PWM4 | TYPE_IW,
-    PWM5 | TYPE_IW,
-    PWM6 | TYPE_IW,
-    PWM7 | TYPE_IW,
-    PWM8 | TYPE_IW,     // input #8
-    PWM9 | TYPE_M,      // motor #1
-    PWM10 | TYPE_M,     // motor #2
-    PWM11 | TYPE_S,     // servo #1
-    PWM12 | TYPE_S,
-    PWM13 | TYPE_S,
-    PWM14 | TYPE_S,     // servo #4
-    0xFF
-};
-
-static const uint8_t * const hardwareMaps[] = {
-    multiPWM,
-    multiPPM,
-    airPWM,
-    airPPM,
 };
 
 #define PWM_TIMER_MHZ 1
@@ -298,13 +242,7 @@ bool pwmInit(drv_pwm_config_t *init)
     // to avoid importing cfg/mcfg
     failsafeThreshold = init->failsafeThreshold;
 
-    // this is pretty hacky shit, but it will do for now. array of 4 config maps, [ multiPWM multiPPM airPWM airPPM ]
-    if (init->airplane)
-        i = 2; // switch to air hardware config
-    if (init->usePPM)
-        i++; // next index is for PPM
-
-    setup = hardwareMaps[i];
+    setup = multiPWM;
 
     for (i = 0; i < MAX_PORTS; i++) {
         uint8_t port = setup[i] & 0x0F;
@@ -319,9 +257,6 @@ bool pwmInit(drv_pwm_config_t *init)
             continue;
 #endif
 
-        // skip UART ports for GPS
-        if (init->useUART && (port == PWM3 || port == PWM4))
-            continue;
 
 #ifdef SOFTSERIAL_19200_LOOPBACK
         // skip softSerial ports
@@ -337,18 +272,6 @@ bool pwmInit(drv_pwm_config_t *init)
         if (mask & (TYPE_IP | TYPE_IW) && !init->enableInput)
             mask = 0;
 
-        if (init->useServos && !init->airplane) {
-            // remap PWM9+10 as servos (but not in airplane mode LOL)
-            if (port == PWM9 || port == PWM10)
-                mask = TYPE_S;
-        }
-
-        if (init->extraServos && !init->airplane) {
-            // remap PWM5..8 as servos when used in extended servo mode
-            if (port >= PWM5 && port <= PWM8)
-                mask = TYPE_S;
-        }
-
         if (mask & TYPE_IP) {
             pwmInConfig(port, ppmCallback, 0);
             numInputs = 8;
@@ -357,8 +280,6 @@ bool pwmInit(drv_pwm_config_t *init)
             numInputs++;
         } else if (mask & TYPE_M) {
             motors[numMotors++] = pwmOutConfig(port, 1000000 / init->motorPwmRate, PULSE_1MS);
-        } else if (mask & TYPE_S) {
-            servos[numServos++] = pwmOutConfig(port, 1000000 / init->servoPwmRate, PULSE_1MS);
         }
     }
 
@@ -369,12 +290,6 @@ void pwmWriteMotor(uint8_t index, uint16_t value)
 {
     if (index < numMotors)
         *motors[index]->ccr = value;
-}
-
-void pwmWriteServo(uint8_t index, uint16_t value)
-{
-    if (index < numServos)
-        *servos[index]->ccr = value;
 }
 
 uint16_t pwmRead(uint8_t channel)

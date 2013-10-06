@@ -714,11 +714,7 @@ void loop(void)
         } else {
             f.PASSTHRU_MODE = 0;
         }
-
-        if (mcfg.mixerConfiguration == MULTITYPE_FLYING_WING || mcfg.mixerConfiguration == MULTITYPE_AIRPLANE) {
-            f.HEADFREE_MODE = 0;
-        }
-    } else {                    // not in rc loop
+                  // not in rc loop
         static int taskOrder = 0;    // never call all function in the same loop, to avoid high delay spikes
         if (taskOrder > 3)
             taskOrder -= 4;
@@ -838,7 +834,6 @@ void loop(void)
         pid_controller();
 
         mixTable();
-        writeServos();
         writeMotors();
     }
 }

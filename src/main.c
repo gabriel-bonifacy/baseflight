@@ -54,17 +54,9 @@ int main(void)
 
     mixerInit(); // this will set core.useServo var depending on mixer type
     // when using airplane/wing mixer, servo/motor outputs are remapped
-    if (mcfg.mixerConfiguration == MULTITYPE_AIRPLANE || mcfg.mixerConfiguration == MULTITYPE_FLYING_WING)
-        pwm_params.airplane = true;
-    else
-        pwm_params.airplane = false;
-    pwm_params.useUART = feature(FEATURE_GPS) || feature(FEATURE_SPEKTRUM); // spektrum support uses UART too
-    pwm_params.usePPM = feature(FEATURE_PPM);
-    pwm_params.enableInput = !feature(FEATURE_SPEKTRUM); // disable inputs if using spektrum
-    pwm_params.useServos = core.useServo;
-    pwm_params.extraServos = cfg.gimbal_flags & GIMBAL_FORWARDAUX;
+
+    pwm_params.enableInput = true;
     pwm_params.motorPwmRate = mcfg.motor_pwm_rate;
-    pwm_params.servoPwmRate = mcfg.servo_pwm_rate;
     pwm_params.failsafeThreshold = cfg.failsafe_detect_threshold;
     switch (mcfg.power_adc_channel) {
         case 1:
@@ -127,8 +119,6 @@ int main(void)
 #endif
 
     previousTime = micros();
-    if (mcfg.mixerConfiguration == MULTITYPE_GIMBAL)
-        calibratingA = 400;
     calibratingG = 1000;
     calibratingB = 200;             // 10 seconds init_delay + 200 * 25 ms = 15 seconds before ground pressure settles
     f.SMALL_ANGLES_25 = 1;

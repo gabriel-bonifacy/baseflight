@@ -272,35 +272,6 @@ static void resetConf(void)
     cfg.failsafe_throttle = 1200;           // decent default which should always be below hover throttle for people.
     cfg.failsafe_detect_threshold = 985;    // any of first 4 channels below this value will trigger failsafe
 
-    // servos
-    cfg.yaw_direction = 1;
-    cfg.tri_yaw_middle = 1500;
-    cfg.tri_yaw_min = 1020;
-    cfg.tri_yaw_max = 2000;
-
-    // flying wing
-    cfg.wing_left_min = 1020;
-    cfg.wing_left_mid = 1500;
-    cfg.wing_left_max = 2000;
-    cfg.wing_right_min = 1020;
-    cfg.wing_right_mid = 1500;
-    cfg.wing_right_max = 2000;
-    cfg.pitch_direction_l = 1;
-    cfg.pitch_direction_r = -1;
-    cfg.roll_direction_l = 1;
-    cfg.roll_direction_r = 1;
-
-    // gimbal
-    cfg.gimbal_pitch_gain = 10;
-    cfg.gimbal_roll_gain = 10;
-    cfg.gimbal_flags = GIMBAL_NORMAL;
-    cfg.gimbal_pitch_min = 1020;
-    cfg.gimbal_pitch_max = 2000;
-    cfg.gimbal_pitch_mid = 1500;
-    cfg.gimbal_roll_min = 1020;
-    cfg.gimbal_roll_max = 2000;
-    cfg.gimbal_roll_mid = 1500;
-
     // gps/nav stuff
     cfg.gps_wp_radius = 200;
     cfg.gps_lpf = 20;

@@ -92,9 +92,6 @@ void computeIMU(void)
             gyroData[axis] = (int16_t)(((int32_t)((int32_t)gyroSmooth[axis] * (Smoothing[axis] - 1)) + gyroData[axis] + 1) / Smoothing[axis]);
             gyroSmooth[axis] = gyroData[axis];
         }
-    } else if (mcfg.mixerConfiguration == MULTITYPE_TRI) {
-        gyroData[YAW] = (gyroYawSmooth * 2 + gyroData[YAW]) / 3;
-        gyroYawSmooth = gyroData[YAW];
     }
 }
 

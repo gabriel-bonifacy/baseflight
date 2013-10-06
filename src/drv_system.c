@@ -42,7 +42,7 @@ void systemInit(void)
     struct {
         GPIO_TypeDef *gpio;
         gpio_config_t cfg;
-    } gpio_setup[] = {
+    } gpio_setup[] = { //Konfiguracja portów dla diod i buzzzera
 #ifdef LED0
         {
             .gpio = LED0_GPIO,
@@ -65,7 +65,7 @@ void systemInit(void)
     };
     gpio_config_t gpio;
     uint32_t i;
-    uint8_t gpio_count = sizeof(gpio_setup) / sizeof(gpio_setup[0]);
+    uint8_t gpio_count = sizeof(gpio_setup) / sizeof(gpio_setup[0]); //Liczba portów GPIO
 
     // Configure the System clock frequency, HCLK, PCLK2 and PCLK1 prescalers
     // Configure the Flash Latency cycles and enable prefetch buffer
@@ -89,6 +89,7 @@ void systemInit(void)
     AFIO->MAPR |= AFIO_MAPR_SWJ_CFG_NO_JTAG_SW;
 
     // Configure gpio
+    //Wyłącz diody i buzzer
     LED0_OFF;
     LED1_OFF;
     BEEP_OFF;
@@ -106,10 +107,12 @@ void systemInit(void)
     SysTick_Config(SystemCoreClock / 1000);
 
     // Configure the rest of the stuff
-#ifndef FY90Q
-    i2cInit(I2C2);
+#ifdef USE_I2C
+    i2cInit(I2C2); //Inicjalizuj I2C
 #endif
-    spiInit();
+#ifdef USE_SPI
+    spiInit(); //Inicjalizuj SPI
+#endif
 
     // sleep for 100ms
     delay(100);

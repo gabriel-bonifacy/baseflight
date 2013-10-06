@@ -21,25 +21,7 @@ typedef enum NavigationMode
 // Syncronized with GUI. Only exception is mixer > 11, which is always returned as 11 during serialization.
 typedef enum MultiType
 {
-    MULTITYPE_TRI = 1,
-    MULTITYPE_QUADP = 2,
-    MULTITYPE_QUADX = 3,
-    MULTITYPE_BI = 4,
-    MULTITYPE_GIMBAL = 5,
-    MULTITYPE_Y6 = 6,
-    MULTITYPE_HEX6 = 7,
-    MULTITYPE_FLYING_WING = 8,
-    MULTITYPE_Y4 = 9,
-    MULTITYPE_HEX6X = 10,
-    MULTITYPE_OCTOX8 = 11,          // Java GUI is same for the next 3 configs
-    MULTITYPE_OCTOFLATP = 12,       // MultiWinGui shows this differently
-    MULTITYPE_OCTOFLATX = 13,       // MultiWinGui shows this differently
-    MULTITYPE_AIRPLANE = 14,        // airplane / singlecopter / dualcopter (not yet properly supported)
-    MULTITYPE_HELI_120_CCPM = 15,
-    MULTITYPE_HELI_90_DEG = 16,
-    MULTITYPE_VTAIL4 = 17,
-    MULTITYPE_CUSTOM = 18,          // no current GUI displays this
-    MULTITYPE_LAST = 19
+    MULTITYPE_QUADX = 0,
 } MultiType;
 
 typedef enum GimbalFlags {
@@ -145,6 +127,12 @@ enum {
 };
 
 typedef struct config_t {
+	uint8_t version;
+    uint16_t size;
+    uint8_t magic_be; // magic number, should be 0xBE
+    uint8_t mixerConfiguration;
+    uint32_t enabledFeatures;
+    
     uint8_t pidController;                  // 0 = multiwii original, 1 = rewrite from http://www.multiwii.com/forum/viewtopic.php?f=8&t=3671
     uint8_t P8[PIDITEMS];
     uint8_t I8[PIDITEMS];
@@ -175,12 +163,18 @@ typedef struct config_t {
     uint16_t activate[CHECKBOXITEMS];       // activate switches
 
     // Radio/ESC-related configuration
-    uint8_t deadband;                       // introduce a deadband around the stick center for pitch and roll axis. Must be greater than zero.
-    uint8_t yawdeadband;                    // introduce a deadband around the stick center for yaw axis. Must be greater than zero.
-    uint8_t alt_hold_throttle_neutral;      // defines the neutral zone of throttle stick during altitude hold, default setting is +/-40
-    uint8_t alt_hold_fast_change;           // when disabled, turn off the althold when throttle stick is out of deadband defined with alt_hold_throttle_neutral; when enabled, altitude changes slowly proportional to stick movement
-    uint8_t throttle_angle_correction;      // 
-
+    uint8_t rcmap[8]; // mapping of radio channels to internal RPYTA+ order
+    uint8_t deadband; // introduce a deadband around the stick center for pitch and roll axis. Must be greater than zero.
+    uint8_t yawdeadband; // introduce a deadband around the stick center for yaw axis. Must be greater than zero.
+    uint8_t alt_hold_throttle_neutral; // defines the neutral zone of throttle stick during altitude hold, default setting is +/-20
+    uint8_t spektrum_hires; // spektrum high-resolution y/n (1024/2048bit)
+    uint16_t midrc; // Some radios have not a neutral point centered on 1500. can be changed here
+    uint16_t mincheck; // minimum rc end
+    uint16_t maxcheck; // maximum rc end
+    uint8_t retarded_arm; // allow disarsm/arm on throttle down + roll left/right/ 
+	uint8_t alt_hold_fast_change;
+	uint8_t throttle_angle_correction;
+	
     // Failsafe related configuration
     uint8_t failsafe_delay;                 // Guard time for failsafe activation after signal lost. 1 step = 0.1sec - 1sec in example (10)
     uint8_t failsafe_off_delay;             // Time for Landing before motors stop in 0.1sec. 1 step = 0.1sec - 20sec in example (200)
@@ -193,30 +187,17 @@ typedef struct config_t {
     uint16_t tri_yaw_min;                   // tail servo min
     uint16_t tri_yaw_max;                   // tail servo max
 
-    // flying wing related configuration
-    uint16_t wing_left_min;                 // min/mid/max servo travel
-    uint16_t wing_left_mid;
-    uint16_t wing_left_max;
-    uint16_t wing_right_min;
-    uint16_t wing_right_mid;
-    uint16_t wing_right_max;
-
     int8_t pitch_direction_l;               // left servo - pitch orientation
     int8_t pitch_direction_r;               // right servo - pitch orientation (opposite sign to pitch_direction_l if servos are mounted mirrored)
     int8_t roll_direction_l;                // left servo - roll orientation
     int8_t roll_direction_r;                // right servo - roll orientation  (same sign as ROLL_DIRECTION_L, if servos are mounted in mirrored orientation)
 
-    // gimbal-related configuration
-    int8_t gimbal_pitch_gain;               // gimbal pitch servo gain (tied to angle) can be negative to invert movement
-    int8_t gimbal_roll_gain;                // gimbal roll servo gain (tied to angle) can be negative to invert movement
-    uint8_t gimbal_flags;                   // in servotilt mode, various things that affect stuff
-    uint16_t gimbal_pitch_min;              // gimbal pitch servo min travel
-    uint16_t gimbal_pitch_max;              // gimbal pitch servo max travel
-    uint16_t gimbal_pitch_mid;              // gimbal pitch servo neutral value
-    uint16_t gimbal_roll_min;               // gimbal roll servo min travel
-    uint16_t gimbal_roll_max;               // gimbal roll servo max travel
-    uint16_t gimbal_roll_mid;               // gimbal roll servo neutral value
-
+	// motor/esc/servo related stuff
+    uint16_t minthrottle; // Set the minimum throttle command sent to the ESC (Electronic Speed Controller). This is the minimum value that allow motors to run at a idle speed.
+    uint16_t maxthrottle; // This is the maximum value for the ESCs at full power this value can be increased up to 2000
+    uint16_t mincommand; // This is the value for the ESCs when they are not armed. In some cases, this value must be lowered down to 900 for some specific ESCs
+    uint16_t motor_pwm_rate; // The update rate of motor outputs (50-498Hz)
+    
     // gps-related stuff
     uint16_t gps_wp_radius;                 // if we are within this distance to a waypoint then we consider it reached (distance is in cm)
     uint8_t gps_lpf;                        // Low pass filter cut frequency for derivative calculation (default 20Hz)
@@ -225,6 +206,13 @@ typedef struct config_t {
     uint16_t nav_speed_min;                 // cm/sec
     uint16_t nav_speed_max;                 // cm/sec
     uint16_t ap_mode;                       // Temporarily Disables GPS_HOLD_MODE to be able to make it possible to adjust the Hold-position when moving the sticks, creating a deadspan for GPS
+	
+	// serial(uart1) baudrate
+    uint32_t serial_baudrate;
+
+    motorMixer_t customMixer[MAX_MOTORS]; // custom mixtable
+    uint8_t magic_ef; // magic number, should be 0xEF
+    uint8_t chk; // XOR checksum
 } config_t;
 
 // System-wide 
@@ -280,7 +268,7 @@ typedef struct master_t {
     uint32_t gps_baudrate;                  // GPS baudrate
 
     // serial(uart1) baudrate
-    uint32_t serial_baudrate;
+    uint32_t serial_baudrate;				//Prędkość transmisji szeregowej (ustawiana w config.h, wartość domyślna 115200)
 
     config_t profile[3];                    // 3 separate profiles
     uint8_t current_profile;                // currently loaded profile
@@ -295,7 +283,6 @@ typedef struct core_t {
     serialPort_t *gpsport;
     serialPort_t *telemport;
     serialPort_t *rcvrport;
-    bool useServo;
 
 } core_t;
 
@@ -404,7 +391,7 @@ void computeIMU(void);
 void blinkLED(uint8_t num, uint8_t wait, uint8_t repeat);
 int getEstimatedAltitude(void);
 
-// Sensors
+// Sensors (zamiast sensors.h)
 void sensorsAutodetect(void);
 void batteryInit(void);
 uint16_t batteryAdcToVoltage(uint16_t src);
@@ -413,8 +400,6 @@ int Baro_update(void);
 void Gyro_getADC(void);
 void Mag_init(void);
 int Mag_getADC(void);
-void Sonar_init(void);
-void Sonar_update(void);
 
 // Output
 void mixerInit(void);

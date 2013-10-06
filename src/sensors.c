@@ -82,7 +82,7 @@ uint16_t batteryAdcToVoltage(uint16_t src)
 //Inicjalizuj informację o baterii (liczb celli oraz mimimalne napięci na jedną cellę)
 void batteryInit(void)
 {
-    uint32_t i; //Liczba celli bateri (wykrywana na podstawie mcfg.vbatmaxcellvoltage, patrz config.c)
+    uint32_t i; //Liczba celli bateri (wykrywana na podstawie mcfg.vbatmaxcellvoltage, patrz config.c i mw.h)
     uint32_t voltage = 0; //Napięcie odczytane z ADC
 
 	//Wykonaj 32 odczyty napięcia
@@ -95,7 +95,7 @@ void batteryInit(void)
 	//Średnie napięcie na podstawie 32 odczytów.
     voltage = batteryAdcToVoltage((uint16_t)(voltage / 32));
 
-	//Autodetekcja liczby celli na podstawie mcfg.vbatmaxcellvoltage (patrz config.c)
+	//Autodetekcja liczby celli na podstawie mcfg.vbatmaxcellvoltage (patrz config.c i mw.h)
     // autodetect cell count, going from 2S..6S
     for (i = 2; i < 6; i++) {
         if (voltage < i * mcfg.vbatmaxcellvoltage)
@@ -382,24 +382,27 @@ void Gyro_getADC(void)
 }
 
 #ifdef MAG
-static float magCal[3] = { 1.0f, 1.0f, 1.0f };     // gain for each axis, populated at sensor init
-static uint8_t magInit = 0;
+static float magCal[3] = { 1.0f, 1.0f, 1.0f };     // gain for each axis, populated at sensor init, wykorzystywane przy kalibracji
+static uint8_t magInit = 0; //Zmiena oznaczająca, że magnetometr został zainicjalizowany (1 -- zainicjalizowany, 0 -- niezainicjalizowany)
 
+//Oczytaj wartości z magnetometru
 static void Mag_getRawADC(void)
 {
     // MAG driver will align itself, so no need to alignSensors()
     hmc5883lRead(magADC);
 }
 
+//Inicjalizacja magnetometru
 void Mag_init(void)
 {
     // initialize and calibration. turn on led during mag calibration (calibration routine blinks it)
     LED1_ON;
     hmc5883lInit(magCal);
     LED1_OFF;
-    magInit = 1;
+    magInit = 1; //Zmienna informująca o tym, że magnetometr został zainicjalizowany
 }
 
+//Odczytaj wartości z magnetometru
 int Mag_getADC(void)
 {
     static uint32_t t, tCal = 0;
@@ -408,7 +411,7 @@ int Mag_getADC(void)
     uint32_t axis;
 
     if ((int32_t)(currentTime - t) < 0)
-        return 0;                 //each read is spaced by 100ms
+        return 0;                 //odstęp pomiędzy kolejnymi odczytami 100 ms
     t = currentTime + 100000;
 
     // Read mag sensor
@@ -418,6 +421,7 @@ int Mag_getADC(void)
     magADC[PITCH] = magADC[PITCH] * magCal[PITCH];
     magADC[YAW]   = magADC[YAW]   * magCal[YAW];
 
+	//Kalibracja magnetometru (f -- flagi flags_t, patrz mw.c)
     if (f.CALIBRATE_MAG) {
         tCal = t;
         for (axis = 0; axis < 3; axis++) {
@@ -425,9 +429,9 @@ int Mag_getADC(void)
             magZeroTempMin[axis] = magADC[axis];
             magZeroTempMax[axis] = magADC[axis];
         }
-        f.CALIBRATE_MAG = 0;
+        f.CALIBRATE_MAG = 0; //Kalibracja magnetometru zakończona
     }
-
+	//Odejmij offset od odczytu dla każdej osi (mcfg patrz config.c)
     if (magInit) {              // we apply offset only once mag calibration is done
         magADC[ROLL] -= mcfg.magZero[ROLL];
         magADC[PITCH] -= mcfg.magZero[PITCH];
@@ -435,7 +439,10 @@ int Mag_getADC(void)
     }
 
     if (tCal != 0) {
+		//Sprawdź, czy upłynęło mniej niż 30 s pomiędzy ostatnim odczytaniem wartości z magnetometru a jego kalibracją
         if ((t - tCal) < 30000000) {    // 30s: you have 30s to turn the multi in all directions
+			//Zapamiętaj najmniejszą i największą wartość odczytaną w ciągu 30 s dla każdej osi.
+			//Wartości te są następnie wykorzystywane do obliczenia średniej i są ustawiane jako magZero (początkowa wartość magnetometru ?)
             LED0_TOGGLE;
             for (axis = 0; axis < 3; axis++) {
                 if (magADC[axis] < magZeroTempMin[axis])
@@ -444,10 +451,11 @@ int Mag_getADC(void)
                     magZeroTempMax[axis] = magADC[axis];
             }
         } else {
-            tCal = 0;
+            tCal = 0; //Ustawienie powoduje, że mcfg.magZero zostanie nadpisana tylko raz.
+            //Oblicz średnią wartość z początkowych odczytów dla każdej osi.
             for (axis = 0; axis < 3; axis++)
                 mcfg.magZero[axis] = (magZeroTempMin[axis] + magZeroTempMax[axis]) / 2; // Calculate offsets
-            writeEEPROM(1, true);
+            writeEEPROM(1, true); //Zapisz nową konfigurację do EEPROM
         }
     }
     
