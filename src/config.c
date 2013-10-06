@@ -2,37 +2,36 @@
 #include "mw.h"
 #include <string.h>
 
+/* 
+ * Min. funkcje oczytu, zapisu i veryfikacji konfiguracji w pamięci EEPROM (w rzeczywistości w pamięci Flash). 
+ */
+ 
 #ifndef FLASH_PAGE_COUNT
 #define FLASH_PAGE_COUNT 128
 #endif
 
 #define FLASH_PAGE_SIZE                 ((uint16_t)0x400)
+
 #define FLASH_WRITE_ADDR                (0x08000000 + (uint32_t)FLASH_PAGE_SIZE * (FLASH_PAGE_COUNT - 1))       // use the last KB for storage
+																												// Adres w pamięci flash, od którego,
+																												// będzie przechowywana konfiguracjia.
+																												// 0x08000000 -- początek pamięci Flash
+																												
+master_t mcfg;  // master config struct with data independent from profiles (dane wspólne dla wszystkich profili)
+config_t cfg;   // profile config struct (dane możliwe do sprofilowania)
 
-master_t mcfg;  // master config struct with data independent from profiles
-config_t cfg;   // profile config struct
-const char rcChannelLetters[] = "AERT1234";
 
-static const uint8_t EEPROM_CONF_VERSION = 49;
-static uint32_t enabledSensors = 0;
-static void resetConf(void);
+static const uint8_t EEPROM_CONF_VERSION = 49; //Wersja konfiguracji EEPROM
+static uint32_t enabledSensors = 0; //Sensory dostępne w systemie
+static void resetConf(void); //Zapisanie do pamięci domyślnej konfiguracji
 
-void parseRcChannels(const char *input)
-{
-    const char *c, *s;
 
-    for (c = input; *c; c++) {
-        s = strchr(rcChannelLetters, *c);
-        if (s)
-            mcfg.rcmap[s - rcChannelLetters] = c - input;
-    }
-}
-
+//Sprawdź poprawność danych w EEPROM
 static uint8_t validEEPROM(void)
 {
     const master_t *temp = (const master_t *)FLASH_WRITE_ADDR;
-    const uint8_t *p;
-    uint8_t chk = 0;
+    const uint8_t *p; //Wskaźnik na dane z EEPROM
+    uint8_t chk = 0; //Suma kontrolna
 
     // check version number
     if (EEPROM_CONF_VERSION != temp->version)
@@ -54,6 +53,7 @@ static uint8_t validEEPROM(void)
     return 1;
 }
 
+//Odczytyje konfigurację z EEPROM
 void readEEPROM(void)
 {
     uint8_t i;
@@ -88,13 +88,15 @@ void readEEPROM(void)
     GPS_set_pids();
 }
 
+//Zapisuje informacje o konfiguracji do EEPROM
+// b -- jeżeli true, migaj diodą, updateProfile -- jeżeli true, uaktualnij profil
 void writeEEPROM(uint8_t b, uint8_t updateProfile)
 {
     FLASH_Status status;
     uint32_t i;
-    uint8_t chk = 0;
-    const uint8_t *p;
-    int tries = 0;
+    uint8_t chk = 0; //Suma kontrolna
+    const uint8_t *p; //Wskaźnik na dane zapisywane do EEPROM
+    int tries = 0; // Liczba prób zapisu do pamięci Flash
 
     // prepare checksum/version constants
     mcfg.version = EEPROM_CONF_VERSION;
@@ -109,6 +111,7 @@ void writeEEPROM(uint8_t b, uint8_t updateProfile)
         memcpy(&mcfg.profile[mcfg.current_profile], &cfg, sizeof(config_t));
     }
 
+	//Oblicz sumę kontrolną (CRC)
     // recalculate checksum before writing
     for (p = (const uint8_t *)&mcfg; p < ((const uint8_t *)&mcfg + sizeof(master_t)); p++)
         chk ^= *p;
@@ -145,17 +148,38 @@ retry:
         blinkLED(15, 20, 1);
 }
 
+// Pierwsze sprawdzanie pamięci EEPROM 
 void checkFirstTime(bool reset)
 {
     // check the EEPROM integrity before resetting values
     if (!validEEPROM() || reset) {
         resetConf();
         // no need to memcpy profile again, we just did it in resetConf() above
-        writeEEPROM(0, false);
+        writeEEPROM(0, false);	// Zapisz wszystko po za profilami
     }
 }
 
-// Default settings
+
+//Mapowania kanałów RC
+const char rcChannelLetters[] = "AERT1234"; // Aileron	Elevator	Throttle	Rudder 	Aux1 Aux2 Aux3 Aux4
+											// Roll		Pitch		Throttle	Yaw		Aux1 Aux2 Aux3 Aux4 
+											
+//Mapuje kolejność kanałów z formatu AERT1234 (AILERON ELEVATOR THROTTLE RUDDER) do RPYTA+ (ROLL PITCH YAW THROTTLE AUX)
+void parseRcChannels(const char *input)
+{
+    const char *c, *s;
+
+    for (c = input; *c; c++) {
+        s = strchr(rcChannelLetters, *c); // Zwraca wskaźnik na pierwsze wystąpienie znaku c
+        if (s) {
+            // (s - rcChannelLetters) pozycja znaku "s" w ciągu rcChannelLetters zaczynając od 0
+            // (c - input) pozycja znaku "c" w ciągu rcChannelLetters zaczynając od 0
+            mcfg.rcmap[s - rcChannelLetters] = c - input;
+        }
+    }
+}
+
+//Resetuj ustawienia do podstawowych
 static void resetConf(void)
 {
     int i;
@@ -167,8 +191,8 @@ static void resetConf(void)
 
     mcfg.version = EEPROM_CONF_VERSION;
     mcfg.mixerConfiguration = MULTITYPE_QUADX;
-    featureClearAll();
-    featureSet(FEATURE_VBAT);
+    featureClearAll(); // Wyłącz wszystkie funkcje dostępne w systemie
+    featureSet(FEATURE_VBAT); //Włącz funkcje FEATURE_VBAT odpowiedzialną z monitorowanie stanu baterii
 
     // global settings
     mcfg.current_profile = 0;       // default profile
@@ -179,7 +203,7 @@ static void resetConf(void)
     mcfg.accZero[1] = 0;
     mcfg.accZero[2] = 0;
     memcpy(&mcfg.align, default_align, sizeof(mcfg.align));
-    mcfg.acc_hardware = ACC_DEFAULT;     // default/autodetect
+    mcfg.acc_hardware = ACC_DEFAULT;     // Autodetekcja akcelerometru
     mcfg.moron_threshold = 32;
     mcfg.gyro_smoothing_factor = 0x00141403;     // default factors of 20, 20, 3 for R/P/Y
     mcfg.vbatscale = 110;
@@ -200,7 +224,6 @@ static void resetConf(void)
     mcfg.neutral3d = 1460;
     mcfg.deadband3d_throttle = 50;
     mcfg.motor_pwm_rate = 400;
-    mcfg.servo_pwm_rate = 50;
     // gps/nav stuff
     mcfg.gps_type = GPS_NMEA;
     mcfg.gps_baudrate = 115200;
@@ -244,8 +267,6 @@ static void resetConf(void)
     cfg.dynThrPID = 0;
     cfg.thrMid8 = 50;
     cfg.thrExpo8 = 0;
-    // for (i = 0; i < CHECKBOXITEMS; i++)
-    //     cfg.activate[i] = 0;
     cfg.angleTrim[0] = 0;
     cfg.angleTrim[1] = 0;
     cfg.mag_declination = 0;    // For example, -6deg 37min, = -637 Japan, format is [sign]dddmm (degreesminutes) default is zero.
@@ -259,7 +280,7 @@ static void resetConf(void)
     cfg.acc_unarmedcal = 1;
 
     // Radio
-    parseRcChannels("AETR1234");
+    parseRcChannels("AETR1234"); // Określenie kole
     cfg.deadband = 0;
     cfg.yawdeadband = 0;
     cfg.alt_hold_throttle_neutral = 40;
@@ -319,26 +340,34 @@ uint32_t sensorsMask(void)
     return enabledSensors;
 }
 
+//Zwraca informacje, czy w systemie występuje określona funkcja.
+//Mask -- użyj typu wyliczeniowego AvailableFeatures (patrz plik board.h)
 bool feature(uint32_t mask)
 {
     return mcfg.enabledFeatures & mask;
 }
 
+//Ustaw informację o istnieniu określonej funkcji w systemie.
+//Mask -- użyj typu wyliczeniowego AvailableFeatures (patrz plik board.h)
 void featureSet(uint32_t mask)
 {
     mcfg.enabledFeatures |= mask;
 }
 
+//Wyczyść informację o istnieniu określonej funkcji w systemie.
+//Mask -- użyj typu wyliczeniowego AvailableFeatures (patrz plik board.h)
 void featureClear(uint32_t mask)
 {
     mcfg.enabledFeatures &= ~(mask);
 }
 
+//Wyczyść informację o wszystkich funkcjach dostępnych w systemie (brak jakichkolwiek funkcji)
 void featureClearAll()
 {
     mcfg.enabledFeatures = 0;
 }
 
+//Zwraca maske informującą o tym, jakie funkcje występują w systemie
 uint32_t featureMask(void)
 {
     return mcfg.enabledFeatures;

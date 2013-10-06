@@ -14,15 +14,22 @@
 #include "stm32f10x_conf.h"
 #include "core_cm3.h"
 
+#include "drv_system.h"         // timers, delays, etc
+#include "drv_gpio.h"
+
+// Chip Unique ID on F103
+#define U_ID_0 (*(uint32_t*)0x1FFFF7E8)
+#define U_ID_1 (*(uint32_t*)0x1FFFF7EC)
+#define U_ID_2 (*(uint32_t*)0x1FFFF7F0)
+
 #ifndef __CC_ARM
 // only need this garbage on gcc
 #define USE_LAME_PRINTF
 #include "printf.h"
 #endif
 
-#include "drv_system.h"         // timers, delays, etc
-#include "drv_gpio.h"
 
+// ----------------- POMOCNICZE MAKRA ----------------- //
 #ifndef M_PI
 #define M_PI       3.14159265358979323846f
 #endif /* M_PI */
@@ -34,43 +41,36 @@
 #define abs(x) ((x) > 0 ? (x) : -(x))
 #define constrain(amt, low, high) ((amt) < (low) ? (low) : ((amt) > (high) ? (high) : (amt)))
 
-// Chip Unique ID on F103
-#define U_ID_0 (*(uint32_t*)0x1FFFF7E8)
-#define U_ID_1 (*(uint32_t*)0x1FFFF7EC)
-#define U_ID_2 (*(uint32_t*)0x1FFFF7F0)
+// ----------------- KONIEC POMOCNICZE MAKRA ----------------- //
 
+
+//Dostępne w systemie sensory
 typedef enum {
     SENSOR_ACC = 1 << 0,
     SENSOR_BARO = 1 << 1,
     SENSOR_MAG = 1 << 2,
-    SENSOR_SONAR = 1 << 3,
-    SENSOR_GPS = 1 << 4,
+    SENSOR_GPS = 1 << 3,
 } AvailableSensors;
 
 // Type of accelerometer used/detected
 typedef enum AccelSensors {
     ACC_DEFAULT = 0,
-    ACC_ADXL345 = 1,
-    ACC_MPU6050 = 2,
-    ACC_MMA8452 = 3,
+    ACC_MPU6050 = 1,
 } AccelSensors;
 
+//Dostępne w systemie funkcje
 typedef enum {
-    FEATURE_PPM = 1 << 0,
-    FEATURE_VBAT = 1 << 1,
-    FEATURE_INFLIGHT_ACC_CAL = 1 << 2,
-    FEATURE_SPEKTRUM = 1 << 3,
-    FEATURE_MOTOR_STOP = 1 << 4,
-    FEATURE_SERVO_TILT = 1 << 5,
-    FEATURE_GYRO_SMOOTHING = 1 << 6,
-    FEATURE_LED_RING = 1 << 7,
-    FEATURE_GPS = 1 << 8,
-    FEATURE_FAILSAFE = 1 << 9,
-    FEATURE_SONAR = 1 << 10,
-    FEATURE_TELEMETRY = 1 << 11,
-    FEATURE_POWERMETER = 1 << 12,
-    FEATURE_VARIO = 1 << 13,
-    FEATURE_3D = 1 << 14,
+    FEATURE_VBAT = 1 << 0,
+    FEATURE_INFLIGHT_ACC_CAL = 1 << 1,
+    FEATURE_MOTOR_STOP = 1 << 2,
+    FEATURE_SERVO_TILT = 1 << 3,
+    FEATURE_GYRO_SMOOTHING = 1 << 4,
+    FEATURE_GPS = 1 << 5,
+    FEATURE_FAILSAFE = 1 << 6,
+    FEATURE_TELEMETRY = 1 << 7,
+    FEATURE_POWERMETER = 1 << 8,
+    FEATURE_VARIO = 1 << 9,
+    FEATURE_3D = 1 << 10,
 } AvailableFeatures;
 
 typedef enum {
@@ -108,14 +108,41 @@ typedef struct baro_t
 
 // Hardware definitions and GPIO
 
-#ifdef OLIMEXINO
 // OLIMEXINO
+#ifdef OLIMEXINO
 
+//Biblioteki wykorzystywane przez OLIMEXINO
+#include "drv_adc.h"
+#include "drv_i2c.h"
+#include "drv_spi.h"
+#include "drv_mpu6050.h"
+#include "drv_hmc5883l.h"
+#include "drv_pwm.h"
+#include "drv_timer.h"
+#include "drv_uart.h"
+#include "drv_softserial.h"
+
+
+// ----------------- SENSORY ----------------- //
+#define USE_I2C // Konieczne, jeżeli któryś z układów używa I2C
+#define USE_SPI // Konieczne, jeżeli któryś z układów używa SPI
+#define GYRO	// Żyroskop obecy w systemie
+#define ACC		// Akcelerometr obecny w systemie
+#define MAG		// Magnetometr dostępny w systemie
+
+#define SENSORS_SET (SENSOR_ACC | SENSOR_MAG) // Zbiór dostępnych dodatkowych sensorów
+											  // Z założenia żyroskop musi być zawsze dostępny,
+											  // dlatego nie należy definiować jego obecności w SENSOR_SET
+// ----------------- KONIEC SENSORY ----------------- //
+
+
+// ----------------- DIODY ----------------- //
 #ifdef OLIMEXINO_UNCUT_LED2_E_JUMPER
 // LED2 is using one of the pwm pins (PWM2), so we must not use PWM2.  @See pwmInit()
-#define LED0_GPIO   GPIOA
-#define LED0_PIN    GPIO_Pin_1 // D3, PA1/USART2_RTS/ADC1/TIM2_CH3 - "LED2" on silkscreen, Yellow
-#define LED0
+#define LED0_GPIO   GPIOA	   // Port, na którym działa dioda LED0
+#define LED0_PIN    GPIO_Pin_1 // Pina, do którego jest podłączona dioda LED0 
+							   // D3, PA1/USART2_RTS/ADC1/TIM2_CH3 - "LED2" on silkscreen, Yellow
+#define LED0				   // Informuje o obecności diody LED0 w systemie
 #endif
 
 #ifdef OLIMEXINO_UNCUT_LED1_E_JUMPER
@@ -124,15 +151,7 @@ typedef struct baro_t
 #define LED1
 #endif
 
-#define USE_I2C
-#define USE_SPI
-#define GYRO
-#define ACC
-#define MAG
-
-#define SENSORS_SET (SENSOR_ACC | SENSOR_MAG)
-
-// Helpful macros
+//Makra zmieniające stan diody LED0
 #ifdef LED0
 #define LED0_TOGGLE              digitalToggle(LED0_GPIO, LED0_PIN);
 #define LED0_OFF                 digitalHi(LED0_GPIO, LED0_PIN);
@@ -143,16 +162,21 @@ typedef struct baro_t
 #define LED0_ON
 #endif
 
+//Makra zmieniające stan diody LED1
 #ifdef LED1
 #define LED1_TOGGLE              digitalToggle(LED1_GPIO, LED1_PIN);
 #define LED1_OFF                 digitalHi(LED1_GPIO, LED1_PIN);
 #define LED1_ON                  digitalLo(LED1_GPIO, LED1_PIN);
 #else
-#define LED1_TOGGLE
-#define LED1_OFF
-#define LED1_ON
+#define LED1_TOGGLE				 ;
+#define LED1_OFF				 ;
+#define LED1_ON					 ;
 #endif
+// ----------------- KONIEC DIODY ----------------- //
 
+
+// ----------------- BUZZER ----------------- //
+//Makra zmieniające stan buzzera
 #ifdef BEEP_GPIO
 #define BEEP_TOGGLE              digitalToggle(BEEP_GPIO, BEEP_PIN);
 #define BEEP_OFF                 digitalHi(BEEP_GPIO, BEEP_PIN);
@@ -162,19 +186,11 @@ typedef struct baro_t
 #define BEEP_OFF                 ;
 #define BEEP_ON                  ;
 #endif
+// ----------------- KONIEC BUZZER ----------------- //
 
-#undef SOFT_I2C                 // enable to test software i2c
+// ----------------- INNE ----------------- //
+#undef SOFT_I2C                  // Wyłączenie programowego I2C
 
-#ifdef OLIMEXINO
-// OLIMEXINO
-#include "drv_adc.h"
-#include "drv_i2c.h"
-#include "drv_spi.h"
-#include "drv_mpu6050.h"
-#include "drv_hmc5883l.h"
-#include "drv_pwm.h"
-#include "drv_timer.h"
-#include "drv_uart.h"
-#include "drv_softserial.h"
-#endif
+// ----------------- KONIEC INNE ----------------- //
+
 #endif

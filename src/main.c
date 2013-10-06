@@ -28,8 +28,8 @@ int fputc(int c, FILE *f)
 int main(void)
 {
     uint8_t i;
-    drv_pwm_config_t pwm_params;
-    drv_adc_config_t adc_params;
+    drv_pwm_config_t pwm_params; //Parametry PWM
+    drv_adc_config_t adc_params; //Parametry ADC
 
     systemInit();
 #ifdef USE_LAME_PRINTF
@@ -80,14 +80,6 @@ int main(void)
 	if (feature(FEATURE_GPS))
 		gpsInit(mcfg.gps_baudrate);
     
-#ifdef SONAR
-    // sonar stuff only works with PPM
-    if (feature(FEATURE_PPM)) {
-        if (feature(FEATURE_SONAR))
-            Sonar_init();
-    }
-#endif
-
     LED1_ON;
     LED0_OFF;
     for (i = 0; i < 10; i++) {

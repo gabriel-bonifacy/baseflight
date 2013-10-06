@@ -1,5 +1,8 @@
 #include "board.h"
 
+#define AIRCR_VECTKEY_MASK ((uint32_t)0x05FA0000)	 // Wykorzytywane przy resecie systemu
+#define AFIO_MAPR_SWJ_CFG_NO_JTAG_SW (0x2 << 24)     // Turn off JTAG port 'cause we're using the GPIO for leds
+
 // cycles per microsecond
 static volatile uint32_t usTicks = 0;
 // current uptime for 1kHz systick timer. will rollover after 49 days. hopefully we won't care.
@@ -7,6 +10,7 @@ static volatile uint32_t sysTickUptime = 0;
 // from system_stm32f10x.c
 void SetSysClock(void);
 
+//Inicjalizuj licznik cylki
 static void cycleCounterInit(void)
 {
     RCC_ClocksTypeDef clocks;
@@ -15,6 +19,7 @@ static void cycleCounterInit(void)
 }
 
 // SysTick
+//Przerwanie wykorzystywane do zliczania cykli wykonanych przez procesor
 void SysTick_Handler(void)
 {
     sysTickUptime++;
@@ -84,8 +89,7 @@ void systemInit(void)
     gpioInit(GPIOB, &gpio);
     gpioInit(GPIOC, &gpio);
 
-    // Turn off JTAG port 'cause we're using the GPIO for leds
-#define AFIO_MAPR_SWJ_CFG_NO_JTAG_SW            (0x2 << 24)
+	//Wyłącz JTAG
     AFIO->MAPR |= AFIO_MAPR_SWJ_CFG_NO_JTAG_SW;
 
     // Configure gpio
@@ -118,40 +122,16 @@ void systemInit(void)
     delay(100);
 }
 
-#if 1
+//Opóźnienie w us
+//us -- opóźnienie w mikrosekundach
 void delayMicroseconds(uint32_t us)
 {
     uint32_t now = micros();
     while (micros() - now < us);
 }
-#else
-void delayMicroseconds(uint32_t us)
-{
-    uint32_t elapsed = 0;
-    uint32_t lastCount = SysTick->VAL;
 
-    for (;;) {
-        register uint32_t current_count = SysTick->VAL;
-        uint32_t elapsed_us;
-
-        // measure the time elapsed since the last time we checked
-        elapsed += current_count - lastCount;
-        lastCount = current_count;
-
-        // convert to microseconds
-        elapsed_us = elapsed / usTicks;
-        if (elapsed_us >= us)
-            break;
-
-        // reduce the delay by the elapsed time
-        us -= elapsed_us;
-
-        // keep fractional microseconds for the next iteration
-        elapsed %= usTicks;
-    }
-}
-#endif
-
+//Opóźnienie w ms
+//ms -- opóźnienie w milisekundach
 void delay(uint32_t ms)
 {
     while (ms--)
@@ -175,8 +155,9 @@ void failureMode(uint8_t mode)
     }
 }
 
-#define AIRCR_VECTKEY_MASK    ((uint32_t)0x05FA0000)
 
+//Reset systemu
+//toBootloader -- jeżeli true, po resecie przejdź do bootloadera
 void systemReset(bool toBootloader)
 {
     if (toBootloader) {

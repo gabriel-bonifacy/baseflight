@@ -163,7 +163,7 @@ typedef struct config_t {
     uint16_t activate[CHECKBOXITEMS];       // activate switches
 
     // Radio/ESC-related configuration
-    uint8_t rcmap[8]; // mapping of radio channels to internal RPYTA+ order
+    uint8_t rcmap[8]; // mapping of radio channels to internal RPYTA+ order (ROLL PITCH YAW THROTTLE AUX)
     uint8_t deadband; // introduce a deadband around the stick center for pitch and roll axis. Must be greater than zero.
     uint8_t yawdeadband; // introduce a deadband around the stick center for yaw axis. Must be greater than zero.
     uint8_t alt_hold_throttle_neutral; // defines the neutral zone of throttle stick during altitude hold, default setting is +/-20

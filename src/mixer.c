@@ -26,8 +26,6 @@ void mixerInit(void)
 {
     int i;
 
-    // enable servos for mixes that require them. note, this shifts motor counts.
-    useServo = mixers[cfg.mixerConfiguration].useServo;
     numberMotor = mixers[cfg.mixerConfiguration].numberMotor;
     // copy motor-based mixers
     if (mixers[cfg.mixerConfiguration].motor) {

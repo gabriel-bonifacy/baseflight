@@ -28,21 +28,24 @@ void sensorsAutodetect(void)
     int16_t deg, min;
     
     //----------- Wykrywanie akcelerometru -----------
-    bool haveMpu6k = false; //Nie wykryoto MPU6050 (jesteśmy przed autodetekcją). 
+    if(mcfg.acc_hardware == ACC_DEFAULT) {
+		
+		bool haveMpu6k = false; //Nie wykryoto MPU6050 (jesteśmy przed autodetekcją). 
 
-    //Autodetekcja MPU6050.
-    //Jeżeli MPU6050 nie zostanie wykryte, ustaw failure mode 3.
-    if (mpu6050Detect(&acc, &gyro, mcfg.gyro_lpf, &mcfg.mpu6050_scale)) {
-		//Ustawienie zmiennej haveMpu6k na true powoduje inicjalizację
-		//struktury acc.* domyślnymi wartościami dla MPU6050.
-        haveMpu6k = true;
-        accHardware = ACC_MPU6050; //Zmienna informuje o typie akcelerometru.
-    } else {
-		sensorsClear(SENSOR_ACC); //Oznacz brak akcelerometru w systemie
-								 //(z racji wywołania failureMode jest to wywołanie czysto formalne).
-        failureMode(3); //Wywołanie funkcji nformującej o błędzie systemu (patrz drv_system.*).
-    }
-
+		//Autodetekcja MPU6050.
+		//Jeżeli MPU6050 nie zostanie wykryte, ustaw failure mode 3.
+		if (mpu6050Detect(&acc, &gyro, mcfg.gyro_lpf, &mcfg.mpu6050_scale)) {
+			//Ustawienie zmiennej haveMpu6k na true powoduje inicjalizację
+			//struktury acc.* domyślnymi wartościami dla MPU6050.
+			haveMpu6k = true;
+			accHardware = ACC_MPU6050; //Zmienna informuje o typie akcelerometru.
+		} else {
+			sensorsClear(SENSOR_ACC); //Oznacz brak akcelerometru w systemie
+									 //(z racji wywołania failureMode jest to wywołanie czysto formalne).
+			failureMode(3); //Wywołanie funkcji nformującej o błędzie systemu (patrz drv_system.*).
+		}
+	}
+	
 	//----------- Wykrywanie barometru -----------
 #ifdef BARO
 	if (!bmp085Detect(&baro)) {

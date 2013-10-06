@@ -208,6 +208,7 @@ void annexCode(void)
     }
 }
 
+//Odczytaj dane PWM dla zadanego kanału
 uint16_t pwmReadRawRC(uint8_t chan)
 {
     uint16_t data;
