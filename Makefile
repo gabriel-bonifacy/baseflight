@@ -7,7 +7,7 @@
 #
 # Makefile for building the baseflight firmware.
 #
-# Invoke this with 'make help' to see the list of supported targets.
+# Invoke this with 'make help' to see the list of supported targets. Test
 # 
 
 ###############################################################################
